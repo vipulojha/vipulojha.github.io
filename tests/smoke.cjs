@@ -43,7 +43,9 @@ async function screenshot(page, path) {
     page.setDefaultTimeout(8000);
     track(page);
     await page.goto(base, { waitUntil: 'networkidle' });
-    assert.match(await page.title(), /Vipul Ojha/);
+    assert.equal(await page.title(), 'vipulojha.dev');
+    assert.equal(await page.locator('meta[property="og:title"]').getAttribute('content'), 'vipulojha.dev');
+    assert.equal(await page.locator('meta[name="twitter:title"]').getAttribute('content'), 'vipulojha.dev');
     assert.equal(await page.locator('h1').count(), 1);
     assert.deepEqual(await page.locator('[data-panel]').evaluateAll(nodes => nodes.map(node => node.dataset.panel)), keys);
     assert.equal(await page.locator('.avatar-frame img').evaluate(img => img.complete && img.naturalWidth > 0), true);
