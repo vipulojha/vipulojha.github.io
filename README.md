@@ -1,8 +1,10 @@
 # Vipul Ojha — personal portfolio
 
-An original static portfolio inspired by the expressive rounded shapes, bold type,
-grid background, and pill navigation of https://yasakei.dev/. HTML, CSS, and a small
-JavaScript file: no framework, build step, analytics, or production dependencies.
+An original static portfolio inspired by the phone-shaped navigation of
+https://www.raffi.town/. A warm illustrated home screen opens functional profile,
+project, toolkit, and contact panels beside the phone. The phone also works on
+mobile. HTML, CSS, and a small JavaScript file: no framework, build step, analytics,
+prerecorded app videos, or production dependencies.
 
 Content is based on the public https://github.com/vipulojha profile, profile README,
 and repository metadata reviewed on October 5, 2026. The ohman repository is labeled
@@ -14,11 +16,16 @@ live status, Spotify activity, or qualifications are invented.
 From this directory:
 
 ```bash
-python3 -m http.server 4173
+python3 -m http.server 4173 --bind 127.0.0.1
 ```
 
-Open http://localhost:4173/. All projects and navigation work without JavaScript.
-JavaScript adds theme persistence, project filters, a mobile menu, and email copying.
+Open http://localhost:4173/. Without JavaScript, all profile and project details
+appear in an ordinary document and navigation uses native anchors. JavaScript adds
+phone sheets, deep-linked panels, theme persistence, project filters, and email
+copying. Escape, the back arrow, and the home indicator return to the home screen.
+
+This redesign is local only until separately approved for publication. Starting
+the preview does not deploy or change the existing live site.
 
 ## Checks
 
@@ -30,11 +37,12 @@ node tests/smoke.cjs
 ```
 
 Keep the preview server running for the browser check. Set `SITE_URL` to test another
-address. The smoke check covers project filtering, light/dark persistence, blocked
-storage, clipboard success/failure, mobile menu and Escape, native anchors, no-JS
-fallback, and no horizontal overflow at 13 viewport widths from 320 to 1440 pixels. It generates
-ignored desktop/mobile screenshots. Clipboard behavior uses test stubs; a real
-browser still requires permission and a secure context.
+address. Set `PLAYWRIGHT_MODULE` to an existing test-only Playwright installation
+instead of installing it in this repository. The shared coordination board tracks
+the actual checks and the regression-suite handoff for this redesign; do not count
+old-design assertions as proof of the new interaction contract. Browser checks
+generate ignored `preview-*.png` screenshots. Clipboard behavior uses test stubs;
+a real browser still requires permission and a secure context.
 
 ## Publish to GitHub Pages
 
@@ -60,18 +68,18 @@ local configuration are not included in the published artifact.
 
 - `index.html`: profile copy, email, project links, and metadata.
 - `styles.css`: colors, responsive layouts, and reduced-motion styling.
-- `app.js`: theme, menu, filters, and clipboard behavior.
+- `app.js`: panel/phone navigation, theme, filters, and clipboard behavior.
 - `assets/avatar.png`: public GitHub avatar snapshot.
 - `social-card.svg` and `assets/social-card.png`: editable share graphic and its
   browser-compatible PNG export. Regenerate the PNG if the graphic changes.
 
 ## Reference analysis
 
-The reference's publicly delivered HTML, CSS, and JavaScript indicate a React site
-using Framer Motion and Material-style color tokens, asymmetric rounded cards,
-anchor sections, project cards, and tech-stack tiles. Its theme can derive from
-Spotify cover art, and content/status use its own APIs. This portfolio recreates
-the broad visual language with original code and content. It does not reuse the
-reference's assets, bundled application code, identity, or private integrations.
-The reference analysis was source-based; interactive inspection in the built-in
-browser was blocked by pending website-access approval.
+The reference uses plain HTML/CSS/JavaScript, a screenshot with clickable hotspots,
+and prerecorded app videos. This portfolio instead renders an original home screen
+and functional content with native elements. It uses no reference media, identity,
+or application code, and does not pretend to run iOS apps or show live activity.
+The source-based analysis is recorded in workspace-root
+`reports/raffi-town-analysis.md`; coordination and current verification evidence
+are in `coordination.md`. Reference mobile rendering was checked live; desktop
+interactions remain unverified because the built-in browser panel was too narrow.
