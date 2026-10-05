@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f8f6f0">
+  <meta name="description" content="Vipul Ojha is a student and developer from India building practical desktop, Android, and web tools. Explore projects and get in touch.">
+  <link rel="canonical" href="https://vipulojha.github.io/">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Vipul Ojha — Student, Developer, Builder">
+  <meta property="og:description" content="Practical software for the web, Android, and desktop. Projects, skills, and ways to connect.">
+  <meta property="og:url" content="https://vipulojha.github.io/">
+  <meta property="og:image" content="https://vipulojha.github.io/assets/social-card.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script defer src="app.js"></script>
+  <title>Vipul Ojha — Student, Developer, Builder</title>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <nav class="nav-shell" aria-label="Main navigation">
+      <a class="brand" href="#home" aria-label="Vipul Ojha, back to home"><span class="brand-mark">v<span>.</span></span><span>vipul ojha</span></a>
+      <div class="nav-links" id="navigation-links">
+        <a href="#about">About</a><a href="#projects">Projects</a><a href="#tech-stack">Stack</a><a href="#contact">Contact</a>
+      </div>
+      <div class="nav-actions">
+        <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Switch to dark theme" aria-pressed="false" title="Switch to dark theme">◐</button>
+        <a class="nav-hello" href="mailto:vipul.ojha.dev@gmail.com">Say hello <span aria-hidden="true">↗</span></a>
+        <button class="menu-toggle" id="menu-toggle" type="button" aria-controls="navigation-links" aria-expanded="false" aria-label="Toggle navigation"><span></span><span></span></button>
+      </div>
+    </nav>
+  </header>
+
+  <main id="main">
+    <section class="hero section-wrap" id="home" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <p class="eyebrow"><span class="eyebrow-dot"></span> STUDENT · DEVELOPER · BUILDER</p>
+        <h1 id="hero-title">Hey, I’m<br><span>Vipul Ojha<span class="period">.</span></span></h1>
+        <p class="hero-lede">I build useful things for real people — from desktop utilities and Android apps to web and business tools.</p>
+        <div class="hero-cta"><a class="button button-primary" href="#projects">Explore my work <span aria-hidden="true">↗</span></a><a class="button button-text" href="#contact">Let’s connect <span aria-hidden="true">→</span></a></div>
+        <p class="hero-location"><span aria-hidden="true">✳</span> Based in India · Always learning</p>
+      </div>
+      <div class="hero-art" aria-label="Portrait of Vipul Ojha surrounded by colorful geometric shapes and software labels">
+        <div class="hero-orbit orbit-one"></div><div class="hero-orbit orbit-two"></div>
+        <span class="hero-spark spark-one" aria-hidden="true">✳</span><span class="hero-spark spark-two" aria-hidden="true">✦</span>
+        <div class="avatar-frame"><img src="assets/avatar.png" alt="Vipul Ojha" width="380" height="380"></div>
+        <span class="art-chip chip-desktop">&lt; desktop /&gt;</span><span class="art-chip chip-android">android.apk ↗</span><span class="art-chip chip-web">{ web: true }</span>
+        <div class="art-disc" aria-hidden="true"></div>
+      </div>
+    </section>
+
+    <section class="about-section section-wrap" id="about" aria-labelledby="about-title">
+      <div class="section-heading"><p class="section-kicker">01 / THE PERSON</p><h2 id="about-title">Curious by default<span class="period">.</span></h2></div>
+      <div class="about-grid">
+        <div class="about-card about-main"><span class="card-symbol" aria-hidden="true">✳</span><h3>Hi, I’m Vipul.</h3><p>I’m a student from India interested in software engineering and product development. I enjoy turning everyday problems into practical tools — and learning something new with every build.</p><a class="inline-link" href="https://github.com/vipulojha" target="_blank" rel="noopener noreferrer">Find me on GitHub <span aria-hidden="true">↗</span></a></div>
+        <div class="about-card about-side"><span class="mini-label">WHAT DRIVES ME</span><div class="about-big-icon" aria-hidden="true">↗</div><p>Useful over flashy.<br>Built to be used.</p></div>
+      </div>
+    </section>
+
+    <section class="projects-section section-wrap" id="projects" aria-labelledby="projects-title">
+      <div class="section-heading projects-heading"><div><p class="section-kicker">02 / SELECTED WORK</p><h2 id="projects-title">Things I’ve built<span class="period">.</span></h2></div><p class="section-intro">A mix of web, Android, and desktop projects — each one a chance to make something useful.</p></div>
+      <div class="project-toolbar"><div id="project-filters" class="project-filters" role="group" aria-label="Filter projects"><button type="button" data-filter="all" aria-pressed="true">All</button><button type="button" data-filter="web" aria-pressed="false">Web</button><button type="button" data-filter="android" aria-pressed="false">Android</button><button type="button" data-filter="desktop" aria-pressed="false">Desktop</button></div><span class="project-count" id="project-count">5 projects</span></div>
+      <div class="project-grid">
+        <article class="project-card" data-category="web"><div class="project-visual visual-canteen" aria-hidden="true"><div class="canteen-ticket"><span>ORDER / 01</span><i></i><i></i><i class="short"></i><b>✓</b></div><span class="visual-shape canteen-circle"></span></div><div class="project-info"><div class="project-meta"><span>WEB APP</span><span>01</span></div><h3>Smart Canteen System</h3><p>A canteen management system built with PHP and MySQL.</p><div class="project-bottom"><span>PHP · MySQL</span><a href="https://github.com/vipulojha/smart-canteen-system" target="_blank" rel="noopener noreferrer" aria-label="View Smart Canteen System on GitHub">View project ↗</a></div></div></article>
+        <article class="project-card" data-category="android"><div class="project-visual visual-workout" aria-hidden="true"><div class="phone"><div class="phone-speaker"></div><span>YOUR PROGRESS</span><div class="progress-ring"><b>↗</b></div><i></i><i class="short"></i></div><span class="visual-shape workout-spark">✳</span></div><div class="project-info"><div class="project-meta"><span>ANDROID</span><span>02</span></div><h3>Workout Tracker</h3><p>An Android app with login, workout plans, exercises, and progress tracking.</p><div class="project-bottom"><span>Java · Android</span><a href="https://github.com/vipulojha/workout_tracker" target="_blank" rel="noopener noreferrer" aria-label="View Workout Tracker on GitHub">View project ↗</a></div></div></article>
+        <article class="project-card" data-category="web"><div class="project-visual visual-pos" aria-hidden="true"><div class="pos-window"><div class="pos-top"><span></span><span></span><span></span></div><div class="pos-row"><i></i><b></b></div><div class="pos-row"><i></i><b></b></div><div class="pos-row"><i></i><b></b></div><div class="pos-total"></div></div><span class="pos-badge">₹</span></div><div class="project-info"><div class="project-meta"><span>WEB APP</span><span>03</span></div><h3>POS System</h3><p>A JavaScript project for managing products and transactions.</p><div class="project-bottom"><span>JavaScript</span><a href="https://github.com/vipulojha/-POS-System" target="_blank" rel="noopener noreferrer" aria-label="View POS System on GitHub">View project ↗</a></div></div></article>
+        <article class="project-card" data-category="web"><div class="project-visual visual-inventory" aria-hidden="true"><div class="inventory-box box-back"></div><div class="inventory-box box-front"><span>▦</span></div><span class="inventory-line">→ → →</span></div><div class="project-info"><div class="project-meta"><span>HACKATHON · WEB</span><span>04</span></div><h3>Core Inventory System</h3><p>An inventory system created for a hackathon.</p><div class="project-bottom"><span>Inventory tools</span><div class="project-links"><a href="https://coreinventorysystem-odoo.vercel.app" target="_blank" rel="noopener noreferrer" aria-label="Open Core Inventory System demo">Live demo ↗</a><a href="https://github.com/vipulojha/CoreInventorySystem-Odoo" target="_blank" rel="noopener noreferrer" aria-label="View Core Inventory System on GitHub">GitHub ↗</a></div></div></div></article>
+        <article class="project-card project-wide" data-category="desktop"><div class="project-visual visual-ohman" aria-hidden="true"><div class="fan"><span></span><span></span><span></span><span></span><b></b></div><span class="ohman-signal">◌ ◌ ◌</span></div><div class="project-info"><div class="project-meta"><span>DESKTOP · FORK · UPSTREAM PROJECT</span><span>05</span></div><h3>ohman</h3><p>A fork of a C# utility for OMEN and Victus fan, GPU, and lighting controls. Credit for the original project belongs to its upstream authors.</p><div class="project-bottom"><span>C# · Windows</span><a href="https://github.com/vipulojha/ohman" target="_blank" rel="noopener noreferrer" aria-label="View the ohman fork on GitHub">View fork ↗</a></div></div></article>
+      </div>
+      <a class="all-projects" href="https://github.com/vipulojha?tab=repositories" target="_blank" rel="noopener noreferrer">More on GitHub <span aria-hidden="true">↗</span></a>
+    </section>
+
+    <section class="stack-section section-wrap" id="tech-stack" aria-labelledby="stack-title"><div class="section-heading"><p class="section-kicker">03 / THE TOOLKIT</p><h2 id="stack-title">Tools of the trade<span class="period">.</span></h2><p class="section-intro">Languages and tools I’ve used across projects, with plenty more to learn.</p></div><div class="stack-grid"><div class="stack-group"><span class="stack-icon" aria-hidden="true">{ }</span><h3>Languages &amp; web</h3><ul><li>C#</li><li>Java</li><li>JavaScript</li><li>HTML &amp; CSS</li><li>PHP</li><li>PowerShell</li></ul></div><div class="stack-group"><span class="stack-icon" aria-hidden="true">▦</span><h3>Data &amp; platforms</h3><ul><li>MySQL</li><li>Android</li><li>Desktop</li><li>Web</li></ul></div><div class="stack-group"><span class="stack-icon" aria-hidden="true">⌘</span><h3>Workflow</h3><ul><li>Git</li><li>GitHub</li><li>Build · Learn · Iterate</li></ul></div></div></section>
+
+    <section class="contact-section section-wrap" id="contact" aria-labelledby="contact-title"><div class="contact-card"><span class="contact-shape" aria-hidden="true">✳</span><p class="section-kicker">04 / GET IN TOUCH</p><h2 id="contact-title">Have an idea?<br><em>Let’s talk.</em></h2><p>Whether you want to collaborate, share feedback, or just say hi — my inbox is open.</p><div class="contact-actions"><a class="button button-light" href="mailto:vipul.ojha.dev@gmail.com">Email me <span aria-hidden="true">↗</span></a><button id="copy-email" type="button" data-email="vipul.ojha.dev@gmail.com">Copy email <span aria-hidden="true">⧉</span></button></div><span id="copy-status" class="copy-status" role="status" aria-live="polite"></span></div></section>
+  </main>
+  <footer class="site-footer section-wrap"><a class="footer-brand" href="#home">vipul ojha<span class="period">.</span></a><p>Made with curiosity in India.</p><div><a href="https://github.com/vipulojha" target="_blank" rel="noopener noreferrer">GitHub ↗</a><a href="mailto:vipul.ojha.dev@gmail.com">Email ↗</a></div><small>© <span id="year">2026</span> Vipul Ojha</small></footer>
+</body>
+</html>

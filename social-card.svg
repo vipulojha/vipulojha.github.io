@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">Vipul Ojha — Student, Developer, Builder</title>
+  <desc id="desc">Purple and warm off-white portfolio card with editorial lettering and geometric shapes.</desc>
+  <defs><pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse"><path d="M48 0H0V48" fill="none" stroke="#e9e4ef" stroke-width="1"/></pattern></defs>
+  <rect width="1200" height="630" fill="#f8f6f0"/><rect width="1200" height="630" fill="url(#grid)"/>
+  <circle cx="1015" cy="303" r="245" fill="#e8defd" stroke="#6938ed" stroke-width="10"/><circle cx="1015" cy="303" r="183" fill="none" stroke="#6938ed" stroke-width="2" stroke-dasharray="10 14"/>
+  <path d="M892 210h228v190H892z" fill="#6938ed" transform="rotate(-12 1006 305)"/><text x="925" y="364" font-family="Arial,sans-serif" font-weight="bold" font-size="170" fill="#fff" transform="rotate(-12 1006 305)">v</text><circle cx="1072" cy="359" r="29" fill="#d8f36a"/>
+  <text x="80" y="112" font-family="Arial,sans-serif" font-size="24" font-weight="bold" letter-spacing="5" fill="#6938ed">STUDENT · DEVELOPER · BUILDER</text>
+  <text x="73" y="268" font-family="Arial,sans-serif" font-size="112" font-weight="bold" letter-spacing="-7" fill="#1e1830">Hey, I’m</text>
+  <text x="73" y="389" font-family="Arial,sans-serif" font-size="112" font-weight="bold" letter-spacing="-7" fill="#1e1830">Vipul Ojha<tspan fill="#6938ed">.</tspan></text>
+  <text x="80" y="477" font-family="Arial,sans-serif" font-size="30" fill="#625d70">Building practical software for real people.</text>
+  <rect x="80" y="532" width="242" height="50" rx="25" fill="#6938ed"/><text x="106" y="565" font-family="Arial,sans-serif" font-weight="bold" font-size="20" fill="#fff">vipulojha.github.io ↗</text>
+</svg>
