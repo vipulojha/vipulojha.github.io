@@ -28,6 +28,7 @@ jobs:
           mkdir _site
           cp -R assets _site/
           cp index.html styles.css app.js favicon.svg social-card.svg .nojekyll _site/
+          cp -R intelligence-explosion _site/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site

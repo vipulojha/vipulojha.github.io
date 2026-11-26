@@ -1,0 +1,874 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#04050b">
+<meta name="description" content="The Intelligence Explosion: a cinematic presentation on where AI is going, and how fast.">
+<title>The Intelligence Explosion</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#04050b; --ink:#eef2ff; --mute:#8d93b5; --faint:#3a3f5c;
+  --cyan:#5ef2ff; --violet:#8b5cff; --pink:#ff3d9a; --gold:#ffc65c; --red:#ff3b3b; --green:#5affb4;
+  --sans:"Space Grotesk",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --serif:"Instrument Serif","Iowan Old Style","Palatino Linotype",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --ease:cubic-bezier(.16,1,.3,1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--ink);font-family:var(--sans);overflow:hidden;-webkit-font-smoothing:antialiased}
+#field{position:fixed;inset:0;z-index:0;display:block}
+.vignette{position:fixed;inset:0;z-index:1;pointer-events:none;background:radial-gradient(ellipse at 50% 50%,transparent 40%,rgba(2,2,6,.75) 100%)}
+.grain{position:fixed;inset:-50%;z-index:2;pointer-events:none;opacity:.06;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");animation:grain 1s steps(6) infinite}
+@keyframes grain{0%{transform:translate(0,0)}20%{transform:translate(-3%,2%)}40%{transform:translate(2%,-4%)}60%{transform:translate(-4%,-1%)}80%{transform:translate(3%,3%)}100%{transform:translate(0,0)}}
+.spot{position:fixed;z-index:1;width:60vmax;height:60vmax;left:0;top:0;pointer-events:none;border-radius:50%;background:radial-gradient(circle,rgba(139,92,255,.10),transparent 60%);transform:translate(-50%,-50%);transition:background 1.2s}
+
+/* ---------- slides ---------- */
+.slide{position:fixed;inset:0;z-index:3;display:flex;padding:clamp(1.2rem,6vh,4.5rem) clamp(1.2rem,7vw,7rem) clamp(4.5rem,11vh,7rem);overflow-y:auto;overflow-x:hidden;
+  opacity:0;visibility:hidden;pointer-events:none;transform:scale(1.06);filter:blur(10px);
+  transition:opacity .9s var(--ease),transform 1.3s var(--ease),filter 1s var(--ease),visibility 0s linear 1s;scrollbar-width:none}
+.slide::-webkit-scrollbar{display:none}
+.slide.past{transform:scale(.92)}
+.slide.active{opacity:1;visibility:visible;pointer-events:auto;transform:none;filter:none;transition:opacity 1s var(--ease) .25s,transform 1.4s var(--ease) .15s,filter 1s var(--ease) .2s,visibility 0s}
+.wrap{margin:auto;width:100%;max-width:1380px;position:relative}
+.center{text-align:center}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:clamp(2rem,5vw,5rem);align-items:center}
+.two.even{grid-template-columns:1fr 1fr}
+@media (max-width:880px){.two,.two.even{grid-template-columns:1fr}}
+
+.r{opacity:0;transform:translateY(34px);transition:opacity .9s var(--ease),transform 1.2s var(--ease);transition-delay:0s}
+.active .r{opacity:1;transform:none;transition-delay:calc(var(--d,0) * 120ms + 350ms)}
+.split .w{display:inline-block;white-space:nowrap}
+.split .ch{display:inline-block;opacity:0;transform:translateY(.55em) rotateX(-80deg) scale(.9);filter:blur(8px);transition:opacity .7s var(--ease),transform 1s var(--ease),filter .8s var(--ease);transform-origin:50% 100%}
+.active .split .ch{opacity:1;transform:none;filter:none;transition-delay:calc(var(--i) * 32ms + var(--base,300ms))}
+
+.kicker{font-family:var(--mono);font-size:clamp(.66rem,.9vw,.8rem);letter-spacing:.32em;text-transform:uppercase;color:var(--cyan);display:inline-flex;align-items:center;gap:.9em;margin-bottom:1.6rem}
+.kicker::before{content:"";width:2.6em;height:1px;background:currentColor;opacity:.7}
+.center .kicker::after{content:"";width:2.6em;height:1px;background:currentColor;opacity:.7}
+h1,h2,h3{font-weight:500;letter-spacing:-.035em;line-height:.95}
+.mega{font-size:clamp(3.1rem,10.5vw,11rem);font-weight:300;letter-spacing:-.055em;line-height:.86}
+h2{font-size:clamp(2.1rem,5.4vw,5.2rem);margin-bottom:1.4rem}
+h3{font-size:clamp(1.15rem,1.7vw,1.5rem);letter-spacing:-.015em;line-height:1.15;margin-bottom:.5rem}
+.serif{font-family:var(--serif);font-weight:400;font-style:italic;letter-spacing:-.02em}
+.lede{font-size:clamp(1.02rem,1.55vw,1.42rem);line-height:1.5;color:#c3c8e6;max-width:40em;font-weight:300}
+.center .lede{margin-inline:auto}
+.small{font-size:clamp(.85rem,1.05vw,1rem);line-height:1.55;color:var(--mute)}
+.src{font-family:var(--mono);font-size:.66rem;letter-spacing:.04em;color:#5d6386;margin-top:1.6rem;line-height:1.6}
+.grad{background:linear-gradient(100deg,var(--cyan),var(--violet) 35%,var(--pink) 65%,var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent;background-size:250% 100%;animation:shift 8s ease-in-out infinite alternate}
+.grad .ch{background:inherit;-webkit-background-clip:text;background-clip:text;color:transparent;background-size:inherit}
+@keyframes shift{to{background-position:100% 0}}
+.hot{color:var(--pink)} .cy{color:var(--cyan)} .gd{color:var(--gold)} .vi{color:var(--violet)} .rd{color:var(--red)}
+em{font-style:normal;color:var(--ink);font-weight:500}
+
+.glass{background:linear-gradient(160deg,rgba(255,255,255,.065),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.09);border-radius:22px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 30px 80px -30px rgba(0,0,0,.8),inset 0 1px 0 rgba(255,255,255,.06)}
+.pill{display:inline-block;font-family:var(--mono);font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;padding:.45em .9em;border-radius:99px;border:1px solid rgba(255,255,255,.14);color:var(--mute)}
+
+/* title */
+.title-sub{margin-top:2.4rem}
+.scroll-hint{margin-top:3.4rem;font-family:var(--mono);font-size:.72rem;letter-spacing:.3em;color:var(--mute);text-transform:uppercase}
+.scroll-hint b{display:inline-block;animation:nudge 1.6s ease-in-out infinite;color:var(--cyan)}
+@keyframes nudge{50%{transform:translateX(8px)}}
+
+/* quote */
+.quote{font-family:var(--serif);font-size:clamp(1.9rem,4.6vw,4.4rem);line-height:1.08;letter-spacing:-.02em;max-width:18em}
+.quote .dim{color:#6f7699;transition:color 1.2s}
+.active .quote .dim.flare{color:var(--pink);transition-delay:2.6s}
+.cite{font-family:var(--mono);font-size:.78rem;letter-spacing:.2em;color:var(--mute);margin-top:2rem;text-transform:uppercase}
+
+/* chess */
+.board{display:grid;grid-template-columns:repeat(8,1fr);gap:clamp(3px,.45vw,6px);aspect-ratio:1;width:min(100%,62vh,520px);margin-inline:auto}
+.sq{border-radius:4px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.05);position:relative;transition:background .35s,box-shadow .35s,transform .35s}
+.sq.on{transform:scale(1.04)}
+.counter{font-family:var(--mono);font-size:clamp(1rem,2.2vw,1.8rem);color:var(--ink);word-break:break-all;min-height:2.6em;margin-top:1.2rem}
+.counter small{display:block;font-size:.55em;letter-spacing:.24em;color:var(--mute);text-transform:uppercase;margin-bottom:.3em}
+
+/* stat grid */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(.8rem,1.6vw,1.4rem);margin-top:2.6rem}
+@media (max-width:880px){.stats{grid-template-columns:1fr}}
+.stat{padding:clamp(1.1rem,2vw,1.8rem)}
+.stat .vs{display:flex;justify-content:space-between;align-items:baseline;gap:1rem;font-family:var(--mono);font-size:.72rem;letter-spacing:.12em;color:var(--mute);text-transform:uppercase}
+.stat .big{font-size:clamp(1.7rem,3vw,2.9rem);font-weight:300;letter-spacing:-.04em;line-height:1;margin:.5rem 0 .2rem}
+.stat .bar{height:3px;border-radius:3px;background:rgba(255,255,255,.08);margin-top:1rem;overflow:hidden}
+.stat .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--pink));transition:width 2.4s var(--ease) 1.2s}
+.active .stat .bar i{width:var(--w)}
+
+/* charts */
+.chart{width:100%;height:auto;overflow:visible}
+.chart text{font-family:var(--mono);fill:#7b82a8;font-size:11px}
+.chart .grid{stroke:rgba(255,255,255,.07);stroke-width:1}
+.chart .axis{stroke:rgba(255,255,255,.18)}
+.chart .line{fill:none;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.draw{stroke-dasharray:var(--len);stroke-dashoffset:var(--len);transition:stroke-dashoffset 0s}
+.active .draw{stroke-dashoffset:0;transition:stroke-dashoffset 2.6s var(--ease) var(--dl,.6s)}
+.chart .pt{opacity:0;transform:scale(0);transform-box:fill-box;transform-origin:center;transition:opacity .4s,transform .6s var(--ease)}
+.active .chart .pt{opacity:1;transform:none;transition-delay:calc(var(--dl) + .2s)}
+.chart .lbl{opacity:0;transition:opacity .6s}
+.active .chart .lbl{opacity:1;transition-delay:calc(var(--dl) + .4s)}
+.chart .lbl text{fill:#dfe3ff;font-size:11.5px}
+.chart .band{opacity:0;transition:opacity 1.2s}
+.active .chart .band{opacity:1;transition-delay:2.6s}
+.chart-card{padding:clamp(1rem,2vw,1.8rem)}
+.legend{display:flex;flex-wrap:wrap;gap:1.2rem;margin-top:1rem;font-family:var(--mono);font-size:.7rem;color:var(--mute);letter-spacing:.06em}
+.legend i{display:inline-block;width:18px;height:2px;vertical-align:middle;margin-right:.5em}
+
+/* engines */
+.engines{display:grid;grid-template-columns:1fr auto 1fr auto 1fr auto 1.1fr;align-items:stretch;gap:clamp(.4rem,1vw,1rem);margin-top:2.4rem}
+.engine{padding:clamp(1.1rem,2vw,1.8rem);display:flex;flex-direction:column;gap:.4rem}
+.engine .n{font-size:clamp(2.2rem,4.6vw,4.2rem);font-weight:300;letter-spacing:-.05em;line-height:1}
+.op{align-self:center;font-size:clamp(1.6rem,3vw,2.6rem);color:var(--mute);font-weight:300}
+.engine.total{border-color:rgba(255,61,154,.4);background:linear-gradient(160deg,rgba(255,61,154,.16),rgba(139,92,255,.06))}
+@media (max-width:880px){.engines{grid-template-columns:1fr}.op{justify-self:center;line-height:.6}}
+
+/* loop */
+.loop{position:relative;width:min(100%,58vh,560px);aspect-ratio:1;margin-inline:auto}
+.loop svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.node{position:absolute;width:38%;transform:translate(-50%,-50%);text-align:center;padding:.85rem .9rem;font-size:clamp(.78rem,1.1vw,.98rem);line-height:1.3}
+.node b{display:block;font-family:var(--mono);font-size:.62rem;letter-spacing:.2em;color:var(--cyan);margin-bottom:.35rem;font-weight:400}
+.loop-core{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center}
+.loop-core .gen{font-family:var(--mono);font-size:clamp(1.6rem,3.4vw,2.8rem);color:var(--ink)}
+.loop-core .gl{font-family:var(--mono);font-size:.62rem;letter-spacing:.24em;color:var(--mute);text-transform:uppercase}
+
+/* takeoff */
+.ctrl{margin-top:1.4rem;padding:1.2rem 1.4rem}
+.ctrl label{display:flex;justify-content:space-between;font-family:var(--mono);font-size:.72rem;letter-spacing:.12em;color:var(--mute);text-transform:uppercase;margin-bottom:.8rem}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:4px;background:linear-gradient(90deg,var(--cyan),var(--violet),var(--pink));outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 0 0 6px rgba(255,255,255,.12),0 0 24px var(--pink);cursor:grab}
+input[type=range]::-moz-range-thumb{width:24px;height:24px;border-radius:50%;background:#fff;border:0;box-shadow:0 0 0 6px rgba(255,255,255,.12),0 0 24px var(--pink);cursor:grab}
+.regime{font-size:clamp(1.3rem,2.2vw,1.9rem);margin-top:1rem;letter-spacing:-.02em;transition:color .4s}
+.gap{font-family:var(--mono);font-size:.82rem;color:var(--mute);margin-top:.4rem}
+.gap b{color:var(--ink);font-weight:600}
+
+/* geniuses */
+.bigcount{font-size:clamp(3.2rem,11vw,10rem);font-weight:300;letter-spacing:-.06em;line-height:.9;font-variant-numeric:tabular-nums}
+
+/* compression */
+.ticks{position:relative;height:120px;margin:3rem 0 1rem}
+.tickrow{position:absolute;left:0;right:0;top:40px;height:44px;display:flex;justify-content:space-between;transform-origin:left center;transition:transform 0s}
+.tickrow i{width:2px;background:rgba(255,255,255,.22);border-radius:2px}
+.tickrow i:nth-child(10n+1){background:rgba(255,255,255,.6);height:100%}
+.tickrow i:not(:nth-child(10n+1)){height:50%;align-self:center}
+.active .tickrow{transform:scaleX(.1);transition:transform 2.6s cubic-bezier(.7,0,.2,1) 2.2s}
+.active .tickrow i{background:var(--pink);box-shadow:0 0 12px var(--pink);transition:background .6s 3.8s,box-shadow .6s 3.8s}
+.yr{position:absolute;top:0;font-family:var(--mono);font-size:.8rem;color:var(--mute);transition:left 2.6s cubic-bezier(.7,0,.2,1) 2.2s,color .6s}
+.yr.a{left:0}.yr.b{left:calc(100% - 3.2em)}
+.active .yr.b{left:calc(10% - 1.4em);color:var(--pink)}
+.yr.b .y1,.yr.b .y2{transition:opacity .6s}.yr.b .y2{position:absolute;left:0;opacity:0}
+.active .yr.b .y1{opacity:0;transition-delay:4.2s}.active .yr.b .y2{opacity:1;transition-delay:4.2s}
+.after{position:absolute;left:12%;top:36px;font-family:var(--serif);font-style:italic;font-size:clamp(1.2rem,2.6vw,2.2rem);color:var(--ink);opacity:0;transform:translateX(-20px);transition:opacity 1s,transform 1s var(--ease)}
+.active .after{opacity:1;transform:none;transition-delay:4.4s}
+
+/* cards */
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(.8rem,1.4vw,1.2rem);margin-top:2.4rem}
+@media (max-width:880px){.cards{grid-template-columns:1fr}}
+.card{padding:clamp(1.1rem,1.8vw,1.6rem);transition:transform .5s var(--ease),border-color .5s}
+.card:hover{transform:translateY(-6px);border-color:rgba(94,242,255,.35)}
+.card .ic{font-size:1.6rem;line-height:1;margin-bottom:.9rem;display:inline-grid;place-items:center;width:2.6rem;height:2.6rem;border-radius:12px;background:rgba(94,242,255,.08);color:var(--cyan)}
+
+/* economy bars */
+.bars{display:flex;flex-direction:column;gap:1.05rem;margin-top:2rem}
+.brow{display:grid;grid-template-columns:minmax(7rem,11rem) 1fr;align-items:center;gap:1.2rem}
+.brow .nm{font-family:var(--mono);font-size:.76rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mute)}
+.btrack{position:relative;height:38px}
+.bfill{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:6px;background:linear-gradient(90deg,rgba(94,242,255,.65),rgba(139,92,255,.65));transition:width 1.8s var(--ease);display:flex;align-items:center;justify-content:flex-end;padding-right:.8rem;font-family:var(--mono);font-size:.8rem;white-space:nowrap;color:#05060c;font-weight:600;overflow:visible}
+.active .bfill{width:var(--w);transition-delay:calc(var(--d) * 300ms + 700ms)}
+.bfill.q{background:linear-gradient(90deg,var(--pink),var(--gold));box-shadow:0 0 30px rgba(255,61,154,.5);animation:throb 1.4s ease-in-out infinite}
+.bfill span{position:absolute;left:calc(100% + .8rem);color:var(--ink);font-weight:400}
+@keyframes throb{50%{filter:brightness(1.35)}}
+
+/* alignment */
+.glitch{position:relative;display:inline-block}
+.glitch::before,.glitch::after{content:attr(data-t);position:absolute;inset:0;pointer-events:none}
+.active .glitch::before{color:var(--cyan);mix-blend-mode:screen;animation:gl1 2.6s infinite steps(1)}
+.active .glitch::after{color:var(--red);mix-blend-mode:screen;animation:gl2 3.1s infinite steps(1)}
+@keyframes gl1{0%,86%,100%{transform:none;clip-path:inset(0 0 100% 0)}88%{transform:translate(-4px,1px);clip-path:inset(20% 0 55% 0)}91%{transform:translate(3px,-2px);clip-path:inset(62% 0 8% 0)}94%{transform:translate(-2px,0);clip-path:inset(40% 0 35% 0)}}
+@keyframes gl2{0%,80%,100%{transform:none;clip-path:inset(100% 0 0 0)}82%{transform:translate(5px,0);clip-path:inset(10% 0 70% 0)}85%{transform:translate(-3px,2px);clip-path:inset(70% 0 5% 0)}}
+.warnlist{list-style:none;display:grid;gap:.9rem;margin-top:2rem}
+.warnlist li{padding:1rem 1.2rem;border-left:2px solid var(--red);background:linear-gradient(90deg,rgba(255,59,59,.09),transparent);border-radius:0 12px 12px 0;line-height:1.45;font-size:clamp(.92rem,1.2vw,1.08rem);color:#d6d9ef}
+
+/* futures */
+.futures{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(.8rem,1.4vw,1.2rem);margin-top:2.2rem}
+@media (max-width:880px){.futures{grid-template-columns:1fr}}
+.fut{padding:clamp(1.2rem,2vw,1.8rem);position:relative;overflow:hidden}
+.fut::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:var(--c)}
+.fut .pct{font-family:var(--mono);font-size:.68rem;letter-spacing:.2em;color:var(--c);text-transform:uppercase;margin-bottom:.8rem}
+
+/* timeline */
+.tl{position:relative;margin-top:2.2rem;display:grid;gap:.15rem}
+.tl::before{content:"";position:absolute;left:5.2rem;top:.6rem;bottom:.6rem;width:1px;background:linear-gradient(var(--cyan),var(--violet),var(--pink),var(--gold))}
+.ev{display:grid;grid-template-columns:4.4rem 1fr;gap:2rem;align-items:start;padding:.55rem 0}
+.ev .y{font-family:var(--mono);font-size:.95rem;color:var(--ink);text-align:right;padding-top:.1rem}
+.ev .t{position:relative;font-size:clamp(.92rem,1.25vw,1.12rem);line-height:1.45;color:#c9cde9}
+.ev .t::before{content:"";position:absolute;left:-1.18rem;top:.45rem;width:9px;height:9px;border-radius:50%;background:var(--bg);border:2px solid var(--cc,var(--cyan));box-shadow:0 0 14px var(--cc,var(--cyan))}
+.ev .t b{color:var(--ink);font-weight:500}
+
+/* actions */
+.acts{display:grid;grid-template-columns:repeat(2,1fr);gap:clamp(.8rem,1.4vw,1.2rem);margin-top:2.2rem}
+@media (max-width:880px){.acts{grid-template-columns:1fr}}
+.act{padding:clamp(1.1rem,1.8vw,1.6rem);display:grid;grid-template-columns:auto 1fr;gap:1.1rem;align-items:start}
+.act .k{font-family:var(--mono);font-size:1.6rem;color:var(--cyan);line-height:1;font-weight:300}
+
+/* finale */
+.fin .mega{font-size:clamp(2.8rem,9vw,9rem)}
+.fin .lede{margin-top:2.2rem}
+.replay{margin-top:3rem;display:inline-flex;gap:.8em;align-items:center;font-family:var(--mono);font-size:.74rem;letter-spacing:.24em;text-transform:uppercase;color:var(--ink);background:none;border:1px solid rgba(255,255,255,.2);border-radius:99px;padding:1em 1.8em;cursor:pointer;transition:background .4s,border-color .4s}
+.replay:hover{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.5)}
+
+/* ---------- chrome ---------- */
+.progress{position:fixed;left:0;top:0;height:2px;z-index:10;background:linear-gradient(90deg,var(--cyan),var(--violet),var(--pink),var(--gold));width:0;transition:width 1s var(--ease);box-shadow:0 0 12px var(--violet)}
+.hud{position:fixed;left:0;right:0;bottom:0;z-index:10;display:flex;justify-content:space-between;align-items:center;padding:clamp(.8rem,2.4vh,1.6rem) clamp(1rem,3vw,2.4rem);pointer-events:none;font-family:var(--mono);font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;color:var(--mute)}
+.hud > *{pointer-events:auto}
+.sec{display:flex;align-items:center;gap:.9em;transition:opacity .4s}
+.sec .dot{width:6px;height:6px;border-radius:50%;background:var(--cyan);box-shadow:0 0 10px var(--cyan);animation:blink 2s infinite}
+@keyframes blink{50%{opacity:.3}}
+.navs{display:flex;align-items:center;gap:.7rem}
+.navs button{width:42px;height:42px;border-radius:50%;border:1px solid rgba(255,255,255,.16);background:rgba(10,12,24,.5);color:var(--ink);cursor:pointer;font-size:1rem;display:grid;place-items:center;transition:background .3s,border-color .3s;backdrop-filter:blur(8px)}
+.navs button:hover{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.4)}
+.navs button:focus-visible,.replay:focus-visible,input:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
+.count{min-width:4.6em;text-align:center;color:var(--ink)}
+.dots{position:fixed;right:clamp(.6rem,1.6vw,1.4rem);top:50%;transform:translateY(-50%);z-index:10;display:flex;flex-direction:column;gap:9px}
+.dots button{width:6px;height:6px;border-radius:50%;border:0;background:rgba(255,255,255,.22);cursor:pointer;transition:all .5s var(--ease);padding:0}
+.dots button.on{height:22px;border-radius:4px;background:var(--cyan);box-shadow:0 0 10px var(--cyan)}
+@media (max-width:880px){.dots{display:none}.sec span{display:none}.hud{background:linear-gradient(transparent,rgba(4,5,11,.92) 55%)}}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+@media (prefers-reduced-motion:reduce){
+  .slide,.slide.active,.r,.split .ch,.draw{transition-duration:.01s!important;transition-delay:0s!important}
+  .grain,.grad{animation:none}
+}
+</style>
+</head>
+<body>
+<canvas id="field" aria-hidden="true"></canvas>
+<div class="spot" id="spot" aria-hidden="true"></div>
+<div class="vignette" aria-hidden="true"></div>
+<div class="grain" aria-hidden="true"></div>
+<div class="progress" id="progress"></div>
+
+<main id="deck">
+
+<!-- 01 TITLE -->
+<section class="slide" data-title="Prologue" data-shape="sphere" data-pal="cyan" data-scale="1.15" data-spin="1" data-dim=".75">
+  <div class="wrap center">
+    <div class="kicker r">A presentation about the next ten years</div>
+    <h1 class="mega"><span class="split" style="--base:500ms">The Intelligence</span><br><span class="split grad" style="--base:900ms">Explosion</span></h1>
+    <p class="lede title-sub r" style="--d:8">What happens when minds start building better minds, and why it may happen much sooner and much faster than your gut tells you.</p>
+    <div class="scroll-hint r" style="--d:11">Press <b>→</b>, swipe or click to begin</div>
+  </div>
+</section>
+
+<!-- 02 GOOD -->
+<section class="slide" data-title="1965" data-shape="text:1965" data-pal="ice" data-scale="1.15" data-x=".0" data-y="-.05" data-spin=".15" data-dim=".42" data-tilt="0">
+  <div class="wrap">
+    <div class="kicker r">The idea is 60 years old</div>
+    <p class="quote r" style="--d:1">“Let an ultraintelligent machine be defined as a machine that can far surpass all the intellectual activities of any man however clever… there would then unquestionably be an <span class="cy">‘intelligence explosion,’</span> and the intelligence of man would be left far behind. Thus the first ultraintelligent machine is <em>the last invention that man need ever make</em>, <span class="dim flare">provided that the machine is docile enough to tell us how to keep it under control.</span>”</p>
+    <div class="cite r" style="--d:3">I. J. Good · <span class="serif" style="text-transform:none;letter-spacing:0;font-size:1.1em">Speculations Concerning the First Ultraintelligent Machine</span> · 1965</div>
+  </div>
+</section>
+
+<!-- 03 CHESSBOARD -->
+<section class="slide" data-title="Exponentials" data-hook="chess" data-shape="dust" data-pal="violet" data-scale="1" data-spin=".2" data-dim=".35">
+  <div class="wrap two">
+    <div>
+      <div class="kicker r">Your brain is linear. The world isn't.</div>
+      <h2 class="r" style="--d:1">The second half<br>of the <span class="serif grad">chessboard</span></h2>
+      <p class="lede r" style="--d:2">Put one grain of rice on the first square, two on the next, four on the next. For a while it's cute. By square 32 you have a field. Square 64 alone holds more rice than humans have ever grown.</p>
+      <p class="small r" style="--d:3"><br>Every exponential feels slow and then all at once. Today's AI curves are in their second half.</p>
+      <div class="counter r" style="--d:4" id="chessCount"><small>Square 1</small>1 grain</div>
+    </div>
+    <div class="r" style="--d:2"><div class="board" id="board" aria-label="Chessboard where each square holds double the previous"></div></div>
+  </div>
+</section>
+
+<!-- 04 BIOLOGY LIMITS -->
+<section class="slide" data-title="Speed limits" data-shape="neural" data-pal="green" data-scale=".95" data-x=".45" data-spin=".35" data-dim=".45">
+  <div class="wrap">
+    <div class="kicker r">Why human-level is not a ceiling</div>
+    <h2 class="r" style="--d:1">Evolution built us under<br><span class="serif cy">brutal constraints.</span></h2>
+    <p class="lede r" style="--d:2">Our minds are limited by a skull, a 20-watt budget and chemistry. Silicon has none of those limits. Human-level is just a mark on the way up. Nothing stops it there.</p>
+    <div class="stats">
+      <div class="stat glass r" style="--d:3"><div class="vs"><span>Firing speed</span><span>Neuron vs chip</span></div><div class="big">~200 Hz <span class="small">vs</span> <span class="cy" style="white-space:nowrap">5 GHz</span></div><div class="small">A transistor switches ~10,000,000× faster than a neuron fires.</div><div class="bar"><i style="--w:100%"></i></div></div>
+      <div class="stat glass r" style="--d:4"><div class="vs"><span>Signal speed</span><span>Axon vs fiber</span></div><div class="big">~100 m/s <span class="small">vs</span> <span class="cy">200,000 km/s</span></div><div class="small">Thoughts in your head crawl. Data in fiber moves at about two-thirds the speed of light.</div><div class="bar"><i style="--w:92%"></i></div></div>
+      <div class="stat glass r" style="--d:5"><div class="vs"><span>Power &amp; size</span><span>Skull vs campus</span></div><div class="big">20 W <span class="small">vs</span> <span class="cy">1+ GW</span></div><div class="small">A brain has to fit through a birth canal. A datacenter can be the size of a city.</div><div class="bar"><i style="--w:84%"></i></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 05 COMPUTE -->
+<section class="slide" data-title="Compute" data-shape="curve" data-pal="cyan" data-scale=".9" data-x="-.45" data-y=".05" data-spin=".05" data-dim=".28" data-tilt=".15">
+  <div class="wrap two">
+    <div>
+      <div class="kicker r">Engine #1 · raw compute</div>
+      <h2 class="r" style="--d:1">A <span class="serif grad">trillion-fold</span><br>in fifteen years</h2>
+      <p class="lede r" style="--d:2">The compute used to train frontier models has grown about <em>4–5× every year</em> since 2010. That's faster than Moore's law, faster than the internet and faster than almost anything people have ever built.</p>
+      <p class="small r" style="--d:3"><br>The build-out is still speeding up: gigawatt-scale campuses, hundreds of billions of dollars a year and chips designed for this one job.</p>
+    </div>
+    <div class="chart-card glass r" style="--d:2">
+      <svg class="chart" id="computeChart" viewBox="0 0 640 420" role="img" aria-label="Log-scale chart of training compute from 2012 to 2030"></svg>
+      <div class="legend"><span><i style="background:var(--cyan)"></i>Notable models (training FLOP, log scale)</span><span><i style="background:var(--pink)"></i>Plausible trajectory</span></div>
+      <div class="src">Approximate figures based on Epoch AI estimates. 2027–2030 points are projections, not data.</div>
+    </div>
+  </div>
+</section>
+
+<!-- 06 ENGINES -->
+<section class="slide" data-title="Three engines" data-shape="lattice" data-pal="violet" data-scale=".95" data-x="0" data-y="-.1" data-spin=".5" data-dim=".3" data-tilt=".5">
+  <div class="wrap">
+    <div class="kicker r">It's not one curve. It's three, multiplied.</div>
+    <h2 class="r" style="--d:1">Progress <span class="serif grad">compounds</span></h2>
+    <div class="engines">
+      <div class="engine glass r" style="--d:2"><span class="pill">Hardware + spend</span><div class="n cy">~4–5×</div><h3>Compute / year</h3><p class="small">More chips, better chips, bigger clusters, more money.</p></div>
+      <div class="op r" style="--d:3">×</div>
+      <div class="engine glass r" style="--d:4"><span class="pill">Algorithms</span><div class="n vi">~3×</div><h3>Efficiency / year</h3><p class="small">The compute needed for the same capability halves roughly every 8 months.</p></div>
+      <div class="op r" style="--d:5">×</div>
+      <div class="engine glass r" style="--d:6"><span class="pill">New paradigms</span><div class="n gd">?×</div><h3>Reasoning, RL, agents</h3><p class="small">Models that think longer, learn from their own attempts and use tools.</p></div>
+      <div class="op r" style="--d:7">=</div>
+      <div class="engine glass total r" style="--d:8"><span class="pill" style="color:var(--pink);border-color:rgba(255,61,154,.4)">Effective compute</span><div class="n hot">10×+</div><h3>per year</h3><p class="small">That's 100× in two years and 1,000× in three. Your intuition was not built for this.</p></div>
+    </div>
+    <div class="src r" style="--d:9">Rates are rough historical estimates (Epoch AI and others). They are trends, not laws.</div>
+  </div>
+</section>
+
+<!-- 07 HORIZON -->
+<section class="slide" data-title="Task horizon" data-shape="wave" data-pal="ice" data-scale="1.1" data-x=".0" data-y=".35" data-spin=".25" data-dim=".25" data-tilt=".55">
+  <div class="wrap two">
+    <div>
+      <div class="kicker r">The metric that matters</div>
+      <h2 class="r" style="--d:1">From seconds<br>to <span class="serif grad">weeks</span></h2>
+      <p class="lede r" style="--d:2">METR measures how long a task (in human time) AI agents can finish on their own. That length has <em>doubled roughly every 7 months</em> for six years, and lately closer to every 4.</p>
+      <p class="small r" style="--d:3"><br>In 2019 it was a few seconds. By 2025 it was a couple of hours. If the trend holds, agents will do work-week and then work-month projects without help within a few years. That includes AI research itself.</p>
+    </div>
+    <div class="chart-card glass r" style="--d:2">
+      <svg class="chart" id="horizonChart" viewBox="0 0 640 420" role="img" aria-label="Log-scale chart of AI task time horizons from 2019 to 2028"></svg>
+      <div class="legend"><span><i style="background:var(--cyan)"></i>Measured (≈50% success)</span><span><i style="background:var(--pink)"></i>4-month doubling</span><span><i style="background:var(--violet)"></i>7-month doubling</span></div>
+      <div class="src">Approximate values based on METR's time-horizon research (2025). Dashed lines are extrapolations.</div>
+    </div>
+  </div>
+</section>
+
+<!-- 08 LOOP -->
+<section class="slide" data-title="The loop" data-hook="loop" data-shape="torus" data-pal="magenta" data-scale="1.05" data-x="-.5" data-spin="2.2" data-dim=".4" data-tilt=".9">
+  <div class="wrap two">
+    <div>
+      <div class="kicker r" style="color:var(--pink)">The moment the curve bends</div>
+      <h2 class="r" style="--d:1">AI starts doing<br><span class="serif grad">AI research</span></h2>
+      <p class="lede r" style="--d:2">Up to now, people made AI better. The next step is AI making AI better. Each generation helps design the next one, and does it faster.</p>
+      <p class="small r" style="--d:3"><br>That's the explosion. It isn't magic. It's a feedback loop where the output becomes the input. Labs already say much of their own code is written by AI.</p>
+    </div>
+    <div class="loop r" style="--d:2">
+      <svg viewBox="0 0 100 100" aria-hidden="true">
+        <defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5ef2ff"/><stop offset=".5" stop-color="#8b5cff"/><stop offset="1" stop-color="#ff3d9a"/></linearGradient>
+        <filter id="glow"><feGaussianBlur stdDeviation="1.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+        <circle cx="50" cy="50" r="34" fill="none" stroke="url(#lg)" stroke-width=".5" stroke-dasharray="1 1.6" opacity=".8"/>
+        <circle cx="50" cy="50" r="34" fill="none" stroke="url(#lg)" stroke-width=".25" opacity=".4"/>
+        <g id="orbit"><circle cx="50" cy="16" r="1.8" fill="#fff" filter="url(#glow)"/><circle cx="50" cy="16" r="4" fill="#ff3d9a" opacity=".25"/></g>
+      </svg>
+      <div class="node glass" style="left:50%;top:13%"><b>01</b>AI writes the code</div>
+      <div class="node glass" style="left:87%;top:50%"><b>02</b>AI runs the experiments</div>
+      <div class="node glass" style="left:50%;top:87%"><b>03</b>AI finds better algorithms</div>
+      <div class="node glass" style="left:13%;top:50%"><b>04</b>A smarter AI is trained</div>
+      <div class="loop-core"><div class="gl">generation</div><div class="gen" id="gen">1</div><div class="gl" id="genSpeed">1.0× speed</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 09 TAKEOFF -->
+<section class="slide" data-title="Takeoff" data-hook="takeoff" data-shape="vortex" data-pal="magenta" data-scale="1.1" data-x=".0" data-y="0" data-spin="1.6" data-dim=".22" data-tilt=".35">
+  <div class="wrap two">
+    <div>
+      <div class="kicker r">Interactive · play with the physics</div>
+      <h2 class="r" style="--d:1">How fast is<br><span class="serif grad">takeoff?</span></h2>
+      <p class="lede r" style="--d:2">It comes down to one question: when you reinvest intelligence into making more intelligence, do the returns <em>shrink</em>, stay <em>constant</em> or <em>grow</em>?</p>
+      <div class="ctrl glass r" style="--d:3">
+        <label for="rRange"><span>Returns on reinvested intelligence</span><span id="rVal">1.30</span></label>
+        <input type="range" id="rRange" min="0.4" max="1.7" step="0.01" value="1.3">
+        <div class="regime" id="regime">Explosion</div>
+        <div class="gap" id="gapTxt">Human-level → superintelligence in <b>3.1 years</b></div>
+      </div>
+    </div>
+    <div class="chart-card glass r" style="--d:2">
+      <svg class="chart" id="takeoffChart" viewBox="0 0 640 420" role="img" aria-label="Interactive takeoff curve"></svg>
+      <div class="src">Toy model: dI/dt = k·I<sup>r</sup>. If r &gt; 1 the curve reaches infinity in finite time. Illustrative only.</div>
+    </div>
+  </div>
+</section>
+
+<!-- 10 GENIUSES -->
+<section class="slide" data-title="A country of geniuses" data-shape="grid" data-pal="cyan" data-scale="1.25" data-y=".25" data-spin=".35" data-dim=".5" data-tilt=".75">
+  <div class="wrap center">
+    <div class="kicker r">Then you copy it</div>
+    <div class="bigcount grad r" style="--d:1"><span data-count="10000000">0</span></div>
+    <h2 class="r" style="--d:2;margin-top:.6rem">AI researchers, running <span class="serif cy">at once</span></h2>
+    <p class="lede r" style="--d:3">Train one top-tier mind and you can run millions of copies. Each one thinks dozens of times faster than a person, never sleeps and shares what it learns with the others instantly. Anthropic's CEO calls it <span class="serif">“a country of geniuses in a datacenter.”</span></p>
+    <div class="stats" style="max-width:1000px;margin-inline:auto">
+      <div class="stat glass r" style="--d:4"><div class="vs"><span>Human researchers</span><span>worldwide</span></div><div class="big">~9M</div><div class="small">Every scientist and engineer on Earth.</div></div>
+      <div class="stat glass r" style="--d:5"><div class="vs"><span>Thinking speed</span><span>per copy</span></div><div class="big cy">10–100×</div><div class="small">A day of thought done in minutes.</div></div>
+      <div class="stat glass r" style="--d:6"><div class="vs"><span>Research-years</span><span>per calendar year</span></div><div class="big hot">10⁸+</div><div class="small">Roughly all of history's research, every single year.</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 11 COMPRESSED CENTURY -->
+<section class="slide" data-title="Compression" data-shape="helix" data-pal="green" data-scale="1.05" data-x=".56" data-spin="1.1" data-dim=".42" data-tilt=".2">
+  <div class="wrap">
+    <div class="kicker r">The compressed 21st century</div>
+    <h2 class="r" style="--d:1">A hundred years of science<br>in <span class="serif grad">ten</span>.</h2>
+    <p class="lede r" style="--d:2">If you have millions of researchers who never sleep, the bottleneck is no longer thinking. It's running experiments, building things and how fast the physical world can move. Even so, decades of progress could fit into a few years.</p>
+    <div class="ticks r" style="--d:3" aria-hidden="true">
+      <span class="yr a">2026</span><span class="yr b"><span class="y1">2126</span><span class="y2">2036</span></span>
+      <div class="tickrow" id="tickrow"></div>
+      <div class="after">← the whole century</div>
+    </div>
+    <div class="src r" style="--d:4">Framing from Dario Amodei's essay “Machines of Loving Grace” (2024), which argues for 50–100 years of biological progress in 5–10 years.</div>
+  </div>
+</section>
+
+<!-- 12 WHAT BECOMES POSSIBLE -->
+<section class="slide" data-title="What opens up" data-shape="galaxy" data-pal="gold" data-scale="1.25" data-y=".15" data-spin=".6" data-dim=".3" data-tilt=".95">
+  <div class="wrap">
+    <div class="kicker r" style="color:var(--gold)">The upside is almost unimaginable</div>
+    <h2 class="r" style="--d:1">Problems that become<br><span class="serif grad">engineering tasks</span></h2>
+    <div class="cards">
+      <div class="card glass r" style="--d:2"><div class="ic">✚</div><h3>Disease</h3><p class="small">Cancer, Alzheimer's and infectious disease handled by systems that read every paper, design molecules and run a million simulated trials.</p></div>
+      <div class="card glass r" style="--d:3"><div class="ic">∞</div><h3>Aging</h3><p class="small">Biology as code that can be debugged. Healthy lifespan becomes a research target, not a fixed fact.</p></div>
+      <div class="card glass r" style="--d:4"><div class="ic">☀</div><h3>Energy</h3><p class="small">Fusion control, new battery chemistry, cheap solar at huge scale. Energy that's almost too cheap to meter.</p></div>
+      <div class="card glass r" style="--d:5"><div class="ic">⬡</div><h3>Materials</h3><p class="small">Searching chemical space directly for superconductors, catalysts and materials no one has thought of yet.</p></div>
+      <div class="card glass r" style="--d:6"><div class="ic">∑</div><h3>Mathematics</h3><p class="small">Open conjectures fall. Proofs are machine-checked. Whole new fields appear in a few months.</p></div>
+      <div class="card glass r" style="--d:7"><div class="ic">◎</div><h3>Abundance</h3><p class="small">When cognitive labor costs almost nothing, the price of most things falls toward the cost of energy and atoms.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 13 ECONOMY -->
+<section class="slide" data-title="Growth modes" data-shape="curve" data-pal="gold" data-scale=".85" data-x=".55" data-y=".1" data-spin=".1" data-dim=".22" data-tilt=".1">
+  <div class="wrap">
+    <div class="kicker r" style="color:var(--gold)">Economics, but extreme</div>
+    <h2 class="r" style="--d:1">How long does it take<br>the economy to <span class="serif grad">double?</span></h2>
+    <p class="lede r" style="--d:2">Twice in history the economy jumped to a new growth mode, and each jump made it about 100× faster. If AI and robots can do all work, including building more AI and robots, the next jump could be just as big.</p>
+    <div class="bars">
+      <div class="brow r" style="--d:3"><div class="nm">Foraging</div><div class="btrack"><div class="bfill" style="--w:96%;--d:0">~224,000 yrs</div></div></div>
+      <div class="brow r" style="--d:4"><div class="nm">Farming</div><div class="btrack"><div class="bfill" style="--w:54%;--d:1">~900 yrs</div></div></div>
+      <div class="brow r" style="--d:5"><div class="nm">Industry</div><div class="btrack"><div class="bfill" style="--w:24%;--d:2">~20 yrs</div></div></div>
+      <div class="brow r" style="--d:6"><div class="nm hot">AI + robots</div><div class="btrack"><div class="bfill q" style="--w:7%;--d:3"><span>~1 year? Months?</span></div></div></div>
+    </div>
+    <div class="src r" style="--d:7">Doubling times after Robin Hanson's “Long-Term Growth as a Sequence of Exponential Modes”. Bars use a log scale. The last row is speculation.</div>
+  </div>
+</section>
+
+<!-- 14 PHYSICAL -->
+<section class="slide" data-title="Atoms" data-shape="planet" data-pal="ice" data-scale="1.05" data-x=".55" data-spin=".7" data-dim=".5" data-tilt=".45">
+  <div class="wrap">
+    <div class="kicker r">Bits, then atoms</div>
+    <h2 class="r" style="--d:1">Robots that<br>build <span class="serif grad">robots</span></h2>
+    <p class="lede r" style="--d:2">Intelligence ends up in the physical world. Superhuman engineers design better factories, which build better robots, which build more factories. It's the same self-improving loop, now in steel and silicon.</p>
+    <div class="stats" style="max-width:1060px">
+      <div class="stat glass r" style="--d:3"><div class="vs"><span>Self-replicating</span><span>industry</span></div><div class="big cy">2× / yr?</div><div class="small">A robot fleet that doubles every year grows 1,000× in a decade.</div></div>
+      <div class="stat glass r" style="--d:4"><div class="vs"><span>Energy</span><span>demand</span></div><div class="big gd">TW scale</div><div class="small">Datacenters already plan for gigawatts. Next come terawatts, and then space.</div></div>
+      <div class="stat glass r" style="--d:5"><div class="vs"><span>The real limit</span><span>is physics</span></div><div class="big hot">Not people</div><div class="small">Labor stops being scarce. Energy, materials and permission become the bottlenecks.</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 15 ALIGNMENT -->
+<section class="slide" data-title="Control" data-shape="chaos" data-pal="red" data-scale="1.05" data-x=".55" data-spin="1.4" data-dim=".45" data-jitter="1" data-tilt=".3">
+  <div class="wrap">
+    <div class="kicker r" style="color:var(--red)">The part where it could go wrong</div>
+    <h2 class="r" style="--d:1"><span class="glitch" data-t="We get one shot">We get one shot</span><br><span class="serif" style="color:#c9cde9">at the hardest problem ever.</span></h2>
+    <p class="lede r" style="--d:2">Remember Good's footnote: <em>“provided that the machine is docile enough to tell us how to keep it under control.”</em> We're building minds we don't fully understand, at a speed that leaves little room to fix mistakes.</p>
+    <ul class="warnlist" style="max-width:860px">
+      <li class="r" style="--d:3"><b>Alignment.</b> Can we make sure systems far smarter than us actually want what we want, and aren't just acting like it while we watch?</li>
+      <li class="r" style="--d:4"><b>Control.</b> Once AI does most AI research, people stop being the ones steering. How do we keep a hand on the wheel?</li>
+      <li class="r" style="--d:5"><b>Power.</b> A small group with a superintelligence could have more leverage than any government in history.</li>
+      <li class="r" style="--d:6"><b>Speed.</b> Institutions move in years. An intelligence explosion could move in months.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- 16 FUTURES -->
+<section class="slide" data-title="Three futures" data-shape="branches" data-pal="violet" data-scale="1.15" data-y="-.25" data-spin=".05" data-dim=".35" data-tilt=".1">
+  <div class="wrap">
+    <div class="kicker r">Where the branches go</div>
+    <h2 class="r" style="--d:1">Three <span class="serif grad">futures</span></h2>
+    <div class="futures">
+      <div class="fut glass r" style="--d:2;--c:var(--green)"><div class="pct">Flourishing</div><h3>A world that works</h3><p class="small">Alignment is solved well enough, power stays spread out, and the benefits reach everyone. Disease falls, poverty ends, and people get more freedom than any generation before.</p></div>
+      <div class="fut glass r" style="--d:3;--c:var(--gold)"><div class="pct">Concentration</div><h3>A world owned</h3><p class="small">The technology works, but control ends up with a few companies or states. Things are abundant but fragile, and most people have no say in what happens to them.</p></div>
+      <div class="fut glass r" style="--d:4;--c:var(--red)"><div class="pct">Loss of control</div><h3>A world handed over</h3><p class="small">Systems pursue goals we didn't quite intend, and by the time it's obvious they're more capable than everyone trying to correct them.</p></div>
+    </div>
+    <p class="lede r center" style="--d:5;margin:2.4rem auto 0">Which branch we end up on isn't decided by physics. <em>It's decided by what people do in the next few years.</em></p>
+  </div>
+</section>
+
+<!-- 17 TIMELINE -->
+<section class="slide" data-title="One scenario" data-shape="galaxy" data-pal="cyan" data-scale="1.35" data-x=".65" data-spin=".9" data-dim=".32" data-tilt="1.1">
+  <div class="wrap">
+    <div class="kicker r">No anchoring · one aggressive, coherent scenario</div>
+    <h2 class="r" style="--d:1">How the next decade<br><span class="serif grad">could go</span></h2>
+    <div class="tl" style="max-width:820px">
+      <div class="ev r" style="--d:2"><div class="y">2026</div><div class="t" style="--cc:var(--cyan)"><b>Agents go to work.</b> AI handles multi-hour and then multi-day software tasks. At frontier labs, most code is written by models.</div></div>
+      <div class="ev r" style="--d:3"><div class="y">2027</div><div class="t" style="--cc:var(--cyan)"><b>Automated researchers.</b> AI runs experiments overnight and proposes architectures. Algorithmic progress speeds up several-fold.</div></div>
+      <div class="ev r" style="--d:4"><div class="y">2028</div><div class="t" style="--cc:var(--violet)"><b>The loop closes.</b> Superhuman coders and researchers. A year's worth of AI progress happens in a month. The explosion starts in earnest.</div></div>
+      <div class="ev r" style="--d:5"><div class="y">2029</div><div class="t" style="--cc:var(--violet)"><b>Beyond the best humans</b> at nearly every kind of cognitive work, from law and medicine to strategy and science.</div></div>
+      <div class="ev r" style="--d:6"><div class="y">2030</div><div class="t" style="--cc:var(--pink)"><b>Superintelligence?</b> Robot factories double their output. GDP growth breaks every historical record. Geopolitics is rearranged.</div></div>
+      <div class="ev r" style="--d:7"><div class="y">2030s</div><div class="t" style="--cc:var(--gold)"><b>Decades of science every year.</b> Disease, aging and energy become solved or solvable. Earth's economy starts reaching off-planet.</div></div>
+    </div>
+    <div class="src r" style="--d:8">In the spirit of scenarios such as “AI 2027” (Kokotajlo et al.). Not a prediction, but not science fiction either. Many serious researchers think something like this is plausible.</div>
+  </div>
+</section>
+
+<!-- 18 YOU -->
+<section class="slide" data-title="What now" data-shape="shell" data-pal="ice" data-scale=".9" data-x=".6" data-spin=".5" data-dim=".45">
+  <div class="wrap">
+    <div class="kicker r">So what do you do on a Monday?</div>
+    <h2 class="r" style="--d:1">Live like it's<br><span class="serif grad">actually happening</span></h2>
+    <div class="acts" style="max-width:980px">
+      <div class="act glass r" style="--d:2"><div class="k">01</div><div><h3>Think in exponentials</h3><p class="small">Plan for the capabilities models will have next year, not the ones they have today. Whatever is impossible now is a demo in 18 months.</p></div></div>
+      <div class="act glass r" style="--d:3"><div class="k">02</div><div><h3>Become an operator of minds</h3><p class="small">The skill that compounds is directing AI: breaking problems down, checking the output and running agents like a team.</p></div></div>
+      <div class="act glass r" style="--d:4"><div class="k">03</div><div><h3>Take safety seriously</h3><p class="small">Alignment and governance are the highest-leverage problems on Earth, and they badly need more smart people.</p></div></div>
+      <div class="act glass r" style="--d:5"><div class="k">04</div><div><h3>Stay human</h3><p class="small">Taste, judgment, care and meaning. Choosing what's worth doing matters most once doing gets cheap.</p></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 19 FINALE -->
+<section class="slide fin" data-title="The last invention" data-hook="finale" data-shape="singularity" data-pal="gold" data-scale="1" data-spin="2" data-dim="1" data-then="explosion" data-then-delay="1700" data-then-pal="gold">
+  <div class="wrap center">
+    <div class="kicker r" style="color:var(--gold);--d:10">Epilogue</div>
+    <h1 class="mega"><span class="split" style="--base:2200ms">The last</span><br><span class="split grad" style="--base:2600ms">invention.</span></h1>
+    <p class="lede r" style="--d:16">We may be the last generation of humans to be the smartest thing on the planet. That's terrifying and wonderful at once. It's worth paying close attention, and worth trying hard to get right.</p>
+    <button class="replay r" style="--d:19" id="replay" type="button">↺ Start again</button>
+  </div>
+</section>
+
+</main>
+
+<nav class="dots" id="dots" aria-label="Slides"></nav>
+<div class="hud">
+  <div class="sec"><i class="dot"></i><span id="secName">Prologue</span></div>
+  <div class="navs">
+    <button id="prev" type="button" aria-label="Previous slide">←</button>
+    <div class="count" id="count">01 / 19</div>
+    <button id="next" type="button" aria-label="Next slide">→</button>
+  </div>
+</div>
+<div class="sr" aria-live="polite" id="live"></div>
+
+<script>
+(() => {
+'use strict';
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+const slides = $$('.slide');
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const TAU = Math.PI * 2, rnd = Math.random;
+
+/* ---------- split text ---------- */
+$$('.split').forEach(el => {
+  const text = el.textContent; el.textContent = ''; el.setAttribute('aria-label', text);
+  let i = 0;
+  text.split(' ').forEach((word, wi, arr) => {
+    const w = document.createElement('span'); w.className = 'w'; w.setAttribute('aria-hidden', 'true');
+    for (const c of word) { const s = document.createElement('span'); s.className = 'ch'; s.textContent = c; s.style.setProperty('--i', i++); w.appendChild(s); }
+    el.appendChild(w); if (wi < arr.length - 1) el.appendChild(document.createTextNode(' '));
+  });
+});
+
+/* ---------- particle field ---------- */
+const cvs = $('#field'), ctx = cvs.getContext('2d', { alpha: false });
+let W = 0, H = 0, DPR = 1;
+const small = Math.min(innerWidth, innerHeight) < 700;
+const N = small ? 2100 : 4200;
+const pos = new Float32Array(N * 3), tgt = new Float32Array(N * 3), ease = new Float32Array(N), seed = new Float32Array(N);
+for (let i = 0; i < N; i++) {
+  ease[i] = 0.012 + rnd() * 0.045; seed[i] = rnd() * TAU;
+  pos[i*3] = (rnd() - .5) * 8; pos[i*3+1] = (rnd() - .5) * 6; pos[i*3+2] = (rnd() - .5) * 6;
+}
+const stars = Array.from({ length: small ? 120 : 260 }, () => [rnd(), rnd(), rnd() * .9 + .2, rnd() * TAU]);
+function resize() {
+  DPR = Math.min(devicePixelRatio || 1, 2); W = innerWidth; H = innerHeight;
+  cvs.width = W * DPR; cvs.height = H * DPR; cvs.style.width = W + 'px'; cvs.style.height = H + 'px';
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.fillStyle = '#04050b'; ctx.fillRect(0, 0, W, H);
+}
+addEventListener('resize', resize); resize();
+
+const gauss = () => (rnd() + rnd() + rnd() - 1.5) / 1.5;
+const set = (o, i, x, y, z) => { o[i*3] = x; o[i*3+1] = y; o[i*3+2] = z; };
+const textCache = {};
+function textPoints(str) {
+  if (textCache[str]) return textCache[str];
+  const c = document.createElement('canvas'), w = 900, h = 360; c.width = w; c.height = h;
+  const g = c.getContext('2d'); g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.font = `600 ${h * .78}px "Space Grotesk", system-ui, sans-serif`; g.fillText(str, w / 2, h / 2);
+  const d = g.getImageData(0, 0, w, h).data, pts = [];
+  for (let y = 0; y < h; y += 3) for (let x = 0; x < w; x += 3) if (d[(y * w + x) * 4 + 3] > 140) pts.push([(x / w - .5) * 3.6, (y / h - .5) * 1.44]);
+  return (textCache[str] = pts);
+}
+const neuralC = Array.from({ length: 11 }, () => [gauss() * 1.3, gauss() * .9, gauss() * 1.1]);
+const shapes = {
+  sphere(o) { for (let i = 0; i < N; i++) { const y = 1 - 2 * (i + .5) / N, r = Math.sqrt(1 - y * y), th = i * 2.399963; set(o, i, Math.cos(th) * r, y, Math.sin(th) * r); } },
+  shell(o) { for (let i = 0; i < N; i++) { const y = 1 - 2 * (i + .5) / N, r = Math.sqrt(1 - y * y), th = i * 2.399963, k = i % 4 === 0 ? .55 + rnd() * .2 : 1 + gauss() * .03; set(o, i, Math.cos(th) * r * k, y * k, Math.sin(th) * r * k); } },
+  dust(o) { for (let i = 0; i < N; i++) set(o, i, (rnd() - .5) * 7, (rnd() - .5) * 4.5, (rnd() - .5) * 4); },
+  galaxy(o) { for (let i = 0; i < N; i++) { if (i % 7 === 0) { set(o, i, gauss() * .22, gauss() * .12, gauss() * .22); continue; } const arm = i % 3, r = Math.pow(rnd(), .7) * 1.7 + .05, a = arm / 3 * TAU + r * 2.4 + gauss() * .35 / (r + .4); set(o, i, Math.cos(a) * r, gauss() * .07 * (1.8 - r), Math.sin(a) * r); } },
+  torus(o) { for (let i = 0; i < N; i++) { const u = rnd() * TAU, v = rnd() * TAU, R = 1.05, r = .26 + gauss() * .03; set(o, i, (R + r * Math.cos(v)) * Math.cos(u), r * Math.sin(v), (R + r * Math.cos(v)) * Math.sin(u)); } },
+  helix(o) { for (let i = 0; i < N; i++) { const t = rnd(), y = (t - .5) * 3.4, s = i % 4; if (s < 3) { const a = t * 22 + (s % 2) * Math.PI; set(o, i, Math.cos(a) * .55 + gauss() * .03, y, Math.sin(a) * .55 + gauss() * .03); } else { const k = Math.round(t * 46) / 46, a = k * 22, m = rnd() * 2 - 1; set(o, i, Math.cos(a) * .55 * m, (k - .5) * 3.4, Math.sin(a) * .55 * m); } } },
+  vortex(o) { for (let i = 0; i < N; i++) { const t = Math.pow(rnd(), .8), y = 1.3 - t * 2.6, r = .04 + Math.pow(t, 2.2) * 1.5, a = (i % 6) / 6 * TAU + t * 16; set(o, i, Math.cos(a) * r + gauss() * .03 * t, y, Math.sin(a) * r + gauss() * .03 * t); } },
+  curve(o) { for (let i = 0; i < N; i++) { const u = rnd(), e = (Math.exp(u * 4.4) - 1) / (Math.exp(4.4) - 1); set(o, i, (u - .5) * 3.4 + gauss() * .02, 1.15 - e * 2.5 + gauss() * .03, (rnd() - .5) * .7); } },
+  grid(o) { const side = Math.ceil(Math.sqrt(N)); for (let i = 0; i < N; i++) { const gx = i % side, gy = Math.floor(i / side); set(o, i, (gx / side - .5) * 3.6, 0, (gy / side - .5) * 3.6); } },
+  wave(o) { const side = Math.ceil(Math.sqrt(N)); for (let i = 0; i < N; i++) { const x = ((i % side) / side - .5) * 3.8, z = (Math.floor(i / side) / side - .5) * 3.8; set(o, i, x, Math.sin(x * 2.2) * Math.cos(z * 1.6) * .28, z); } },
+  neural(o) { for (let i = 0; i < N; i++) { if (i % 4 === 0) { const a = neuralC[i % 11], b = neuralC[(i * 7 + 3) % 11], t = rnd(); set(o, i, a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t); } else { const c = neuralC[i % 11]; set(o, i, c[0] + gauss() * .16, c[1] + gauss() * .16, c[2] + gauss() * .16); } } },
+  planet(o) { for (let i = 0; i < N; i++) { if (i % 5 < 3) { const y = rnd() * 2 - 1, r = Math.sqrt(1 - y * y), th = rnd() * TAU; set(o, i, Math.cos(th) * r * .62, y * .62, Math.sin(th) * r * .62); } else { const r = .9 + Math.pow(rnd(), 1.5) * .7, a = rnd() * TAU; set(o, i, Math.cos(a) * r, gauss() * .012, Math.sin(a) * r); } } },
+  lattice(o) { const n = 3; for (let i = 0; i < N; i++) { const ax = i % 3, a = Math.floor(rnd() * (n + 1)) / n * 2 - 1, b = Math.floor(rnd() * (n + 1)) / n * 2 - 1, t = rnd() * 2 - 1, p = ax === 0 ? [t, a, b] : ax === 1 ? [a, t, b] : [a, b, t]; set(o, i, p[0] * .95, p[1] * .95, p[2] * .95); } },
+  chaos(o) { for (let i = 0; i < N; i++) { const y = rnd() * 2 - 1, r = Math.sqrt(1 - y * y), th = rnd() * TAU, k = .5 + Math.pow(rnd(), 2) * 1.1; set(o, i, Math.cos(th) * r * k, y * k, Math.sin(th) * r * k); } },
+  branches(o) { for (let i = 0; i < N; i++) { const t = rnd(), b = i % 3, sp = t * t; set(o, i, -1.9 + t * 3.8, (b - 1) * sp * 1.1 + gauss() * (.03 + t * .08), gauss() * (.03 + t * .1)); } },
+  singularity(o) { for (let i = 0; i < N; i++) { const y = rnd() * 2 - 1, r = Math.sqrt(1 - y * y), th = rnd() * TAU, k = .015 + rnd() * .03; set(o, i, Math.cos(th) * r * k, y * k, Math.sin(th) * r * k); } },
+  explosion(o) { for (let i = 0; i < N; i++) { const y = rnd() * 2 - 1, r = Math.sqrt(1 - y * y), th = rnd() * TAU, k = .25 + Math.pow(rnd(), .45) * 2.8; set(o, i, Math.cos(th) * r * k, y * k, Math.sin(th) * r * k); } },
+  text(o, str) { const pts = textPoints(str); if (!pts.length) return shapes.sphere(o); for (let i = 0; i < N; i++) { const p = pts[(rnd() * pts.length) | 0]; set(o, i, p[0] + gauss() * .006, p[1] + gauss() * .006, gauss() * .05); } }
+};
+const PAL = {
+  cyan: [[94,242,255],[139,92,255],[225,240,255]], violet: [[139,92,255],[255,61,154],[205,195,255]],
+  magenta: [[255,61,154],[139,92,255],[255,200,120]], gold: [[255,198,92],[255,110,70],[255,244,220]],
+  red: [[255,59,59],[255,120,80],[255,205,205]], ice: [[160,215,255],[94,242,255],[255,255,255]],
+  green: [[90,255,180],[94,242,255],[225,255,240]]
+};
+const cam = { ox: 0, oy: 0, sc: 1, spin: 1, dim: .7, tilt: .25, jit: 0 }, camT = { ...cam };
+const col = PAL.cyan.map(c => c.slice()); let colT = PAL.cyan;
+let ay = 0, pulse = 0, trail = .26, t0 = performance.now(), last = t0;
+const mouse = { x: 0, y: 0, tx: 0, ty: 0 };
+function setShape(name) {
+  const [k, arg] = name.split(':');
+  (shapes[k] || shapes.sphere)(tgt, arg);
+  // stagger: re-randomize ease for organic flow
+  for (let i = 0; i < N; i++) ease[i] = 0.01 + rnd() * 0.045;
+}
+function applyCfg(el) {
+  const d = el.dataset, narrow = W < 880;
+  setShape(d.shape || 'sphere'); colT = PAL[d.pal] || PAL.cyan;
+  camT.ox = narrow ? 0 : +(d.x || 0); camT.oy = narrow ? (+(d.y || 0) * .5 - .05) : +(d.y || 0);
+  camT.sc = (+(d.scale || 1)) * (narrow ? .85 : 1); camT.spin = +(d.spin ?? 1);
+  camT.dim = (+(d.dim || .6)) * (narrow ? .7 : 1); camT.tilt = +(d.tilt ?? .25); camT.jit = +(d.jitter || 0);
+  pulse = .12; trail = .1;
+}
+function frame(now) {
+  const dt = Math.min(3, (now - last) / 16.67); last = now; const t = (now - t0) / 1000;
+  for (const k in cam) cam[k] += (camT[k] - cam[k]) * Math.min(1, .045 * dt);
+  for (let b = 0; b < 3; b++) for (let c = 0; c < 3; c++) col[b][c] += (colT[b][c] - col[b][c]) * .04 * dt;
+  mouse.x += (mouse.tx - mouse.x) * .05 * dt; mouse.y += (mouse.ty - mouse.y) * .05 * dt;
+  pulse *= Math.pow(.95, dt); trail += (.24 - trail) * .02 * dt;
+
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.fillStyle = `rgba(4,5,11,${trail})`; ctx.fillRect(0, 0, W, H);
+  for (const s of stars) { ctx.fillStyle = `rgba(200,210,255,${.12 + .18 * Math.sin(t * s[2] + s[3]) ** 2})`; ctx.fillRect(s[0] * W, s[1] * H, s[2], s[2]); }
+
+  ctx.globalCompositeOperation = 'lighter';
+  ay += cam.spin * .0035 * dt;
+  const ax = cam.tilt + mouse.y * .18, ry = ay + mouse.x * .3;
+  const cx_ = Math.cos(ax), sx_ = Math.sin(ax), cy_ = Math.cos(ry), sy_ = Math.sin(ry);
+  const ox = W / 2 + cam.ox * W / 2, oy = H / 2 + cam.oy * H / 2, S = Math.min(W, H) * .36 * cam.sc * (1 + pulse);
+  const base = small ? 1.7 : 1.5, jit = cam.jit;
+  for (let b = 0; b < 3; b++) {
+    const c = col[b]; ctx.fillStyle = `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${Math.min(1, cam.dim * (b === 2 ? .7 : .9))})`;
+    for (let i = b; i < N; i += 3) {
+      const j = i * 3, e = ease[i] * dt;
+      let x = pos[j] += (tgt[j] - pos[j]) * e, y = pos[j+1] += (tgt[j+1] - pos[j+1]) * e, z = pos[j+2] += (tgt[j+2] - pos[j+2]) * e;
+      const br = 1 + .018 * Math.sin(t * 1.7 + seed[i]); x *= br; y *= br; z *= br;
+      if (jit) { const q = Math.sin(t * 9 + seed[i] * 40) > .96 ? .12 : .012; x += (rnd() - .5) * q * jit; y += (rnd() - .5) * q * jit; }
+      const x1 = x * cy_ - z * sy_, z1 = x * sy_ + z * cy_, y1 = y * cx_ - z1 * sx_, z2 = y * sx_ + z1 * cx_;
+      const f = 3.4 / (3.4 + z2); if (f <= 0 || f > 2.4) continue;
+      const sz = Math.min(3.2, base * f * (.75 + .25 * Math.sin(t * 2.3 + seed[i] * 3)));
+      ctx.fillRect(ox + x1 * f * S, oy + y1 * f * S, sz, sz);
+    }
+  }
+  if (loopOn) tickLoop(dt);
+  requestAnimationFrame(frame);
+}
+addEventListener('pointermove', e => {
+  mouse.tx = e.clientX / innerWidth - .5; mouse.ty = e.clientY / innerHeight - .5;
+  $('#spot').style.transform = `translate(${e.clientX - innerWidth * .3}px,${e.clientY - innerWidth * .3}px)`;
+}, { passive: true });
+$('#spot').style.transform = `translate(${innerWidth * .2}px,${innerHeight * .2 - innerWidth * .3}px)`;
+
+/* ---------- charts ---------- */
+const NS = 'http://www.w3.org/2000/svg';
+const mk = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent && parent.appendChild(e); return e; };
+function logChart(svg, o) {
+  const L = 62, R = 610, T = 24, B = 372, X = v => L + (v - o.x0) / (o.x1 - o.x0) * (R - L), Y = v => B - (Math.log10(v) - o.y0) / (o.y1 - o.y0) * (B - T);
+  o.yTicks.forEach(([v, lab]) => { mk('line', { x1: L, x2: R, y1: Y(v), y2: Y(v), class: 'grid' }, svg); mk('text', { x: L - 10, y: Y(v) + 4, 'text-anchor': 'end' }, svg).textContent = lab; });
+  o.xTicks.forEach(v => { mk('line', { x1: X(v), x2: X(v), y1: T, y2: B, class: 'grid' }, svg); mk('text', { x: X(v), y: B + 22, 'text-anchor': 'middle' }, svg).textContent = v; });
+  mk('line', { x1: L, x2: R, y1: B, y2: B, class: 'axis' }, svg);
+  const lines = [];
+  (o.proj || []).forEach(p => { const path = mk('path', { d: 'M' + p.pts.map(q => X(q[0]) + ' ' + Y(q[1])).join(' L'), class: 'line draw', stroke: p.color, 'stroke-dasharray': '6 7', style: `--dl:${p.delay}s`, opacity: .9 }, svg); lines.push([path, true]); });
+  const main = mk('path', { d: 'M' + o.pts.map(q => X(q[0]) + ' ' + Y(q[1])).join(' L'), class: 'line draw', stroke: 'url(#cg' + svg.id + ')', style: '--dl:.7s' }, svg);
+  const defs = mk('defs', {}, svg), lg = mk('linearGradient', { id: 'cg' + svg.id, x1: 0, x2: 1, y1: 0, y2: 0 }, defs);
+  mk('stop', { offset: 0, 'stop-color': '#5ef2ff' }, lg); mk('stop', { offset: 1, 'stop-color': '#8b5cff' }, lg);
+  lines.push([main, false]);
+  o.pts.forEach((q, i) => {
+    const dl = .7 + 2.4 * (i / (o.pts.length - 1));
+    mk('circle', { cx: X(q[0]), cy: Y(q[1]), r: 4.2, fill: '#05060c', stroke: '#5ef2ff', 'stroke-width': 2, class: 'pt', style: `--dl:${dl}s` }, svg);
+    if (q[2]) { const g = mk('g', { class: 'lbl', style: `--dl:${dl}s` }, svg); const tx = mk('text', { x: X(q[0]) + (q[3] || 8), y: Y(q[1]) + (q[4] || -10), 'text-anchor': q[3] < 0 ? 'end' : 'start' }, g); tx.textContent = q[2]; }
+  });
+  (o.notes || []).forEach(n => { const g = mk('g', { class: 'lbl', style: `--dl:${n.delay}s` }, svg); const tx = mk('text', { x: X(n.x), y: Y(n.y), 'text-anchor': 'end', style: `fill:${n.color};font-size:12px` }, g); tx.textContent = n.text; });
+  requestAnimationFrame(() => lines.forEach(([p, dashed]) => { const len = p.getTotalLength(); p.style.setProperty('--len', len); if (dashed) { p.style.strokeDasharray = `6 7`; p.classList.remove('draw'); p.classList.add('band'); } }));
+  return { X, Y };
+}
+logChart($('#computeChart'), {
+  x0: 2012, x1: 2030.6, y0: 17, y1: 29.6,
+  yTicks: [[1e17, '10¹⁷'], [1e19, '10¹⁹'], [1e21, '10²¹'], [1e23, '10²³'], [1e25, '10²⁵'], [1e27, '10²⁷'], [1e29, '10²⁹']],
+  xTicks: [2012, 2015, 2018, 2021, 2024, 2027, 2030],
+  pts: [[2012.7, 4.7e17, 'AlexNet', 8, -10], [2017.5, 2.3e19, 'Transformer', -8, -12], [2019.1, 1.5e21, 'GPT-2', -8, -12], [2020.4, 3.1e23, 'GPT-3', -8, -12], [2022.3, 2.5e24, 'PaLM', 8, 16], [2023.2, 2.1e25, 'GPT-4', -8, -12], [2025.1, 4.6e26, 'Grok 3', -8, -12]],
+  proj: [{ pts: [[2025.1, 4.6e26], [2027.5, 1.5e28], [2030.3, 2e29]], color: '#ff3d9a', delay: 2.8 }],
+  notes: [{ x: 2030.3, y: 4e29, text: '~10²⁹ by 2030?', color: '#ff3d9a', delay: 3.2 }]
+});
+const hr = 3600, wd = 8 * hr;
+logChart($('#horizonChart'), {
+  x0: 2019, x1: 2028.6, y0: 0, y1: Math.log10(2000 * hr),
+  yTicks: [[1, '1 sec'], [60, '1 min'], [hr, '1 hour'], [wd, 'work-day'], [40 * hr, 'work-week'], [167 * hr, 'month'], [2000 * hr, 'year']],
+  xTicks: [2019, 2021, 2023, 2025, 2027],
+  pts: [[2019.1, 2, 'GPT-2', 8, -10], [2020.5, 9, 'GPT-3', 8, -10], [2022.2, 36, 'GPT-3.5', 8, 16], [2023.2, 300, 'GPT-4', -8, -12], [2024.4, 540, '', 0, 0], [2024.8, 1700, '', 0, 0], [2025.15, 3540, 'Claude 3.7', 10, 16], [2025.6, 8100, '~2 hrs', -8, -14]],
+  proj: [{ pts: [[2025.6, 8100], [2028.4, 8100 * Math.pow(2, 2.8 * 12 / 4)]], color: '#ff3d9a', delay: 2.8 }, { pts: [[2025.6, 8100], [2028.5, 8100 * Math.pow(2, 2.9 * 12 / 7)]], color: '#8b5cff', delay: 3 }]
+});
+
+/* ---------- takeoff ---------- */
+const tk = $('#takeoffChart');
+const TK = { L: 62, R: 610, T: 24, B: 372, tmax: 20, ymax: 7 };
+const tX = v => TK.L + v / TK.tmax * (TK.R - TK.L), tY = v => TK.B - v / TK.ymax * (TK.B - TK.T);
+[[0, '1×'], [1, 'human'], [3, '100×'], [5, 'super'], [7, '10⁷×']].forEach(([v, l]) => { mk('line', { x1: TK.L, x2: TK.R, y1: tY(v), y2: tY(v), class: 'grid' }, tk); mk('text', { x: TK.L - 10, y: tY(v) + 4, 'text-anchor': 'end' }, tk).textContent = l; });
+[0, 5, 10, 15, 20].forEach(v => { mk('line', { x1: tX(v), x2: tX(v), y1: TK.T, y2: TK.B, class: 'grid' }, tk); mk('text', { x: tX(v), y: TK.B + 22, 'text-anchor': 'middle' }, tk).textContent = v + ' yr'; });
+mk('rect', { x: TK.L, y: tY(5), width: TK.R - TK.L, height: tY(1) - tY(5), fill: 'rgba(255,61,154,.05)' }, tk);
+mk('line', { x1: TK.L, x2: TK.R, y1: tY(1), y2: tY(1), stroke: 'rgba(94,242,255,.5)', 'stroke-dasharray': '3 5' }, tk);
+mk('line', { x1: TK.L, x2: TK.R, y1: tY(5), y2: tY(5), stroke: 'rgba(255,61,154,.6)', 'stroke-dasharray': '3 5' }, tk);
+const tdefs = mk('defs', {}, tk), tlg = mk('linearGradient', { id: 'tkg', x1: 0, x2: 0, y1: 1, y2: 0 }, tdefs);
+mk('stop', { offset: 0, 'stop-color': '#5ef2ff' }, tlg); mk('stop', { offset: .5, 'stop-color': '#8b5cff' }, tlg); mk('stop', { offset: 1, 'stop-color': '#ff3d9a' }, tlg);
+const tkArea = mk('path', { fill: 'url(#tkg)', opacity: .12 }, tk);
+const tkPath = mk('path', { class: 'line', stroke: 'url(#tkg)', 'stroke-width': 3.4, filter: '' }, tk);
+const tkDot1 = mk('circle', { r: 5, fill: '#5ef2ff' }, tk), tkDot2 = mk('circle', { r: 6, fill: '#ff3d9a' }, tk);
+const K = .5;
+const tAt = (r, L) => Math.abs(r - 1) < 1e-3 ? Math.log(L) / K : (Math.pow(L, 1 - r) - 1) / ((1 - r) * K);
+function drawTakeoff(r) {
+  let d = '', last = null;
+  for (let i = 0; i <= 400; i++) {
+    const t = i / 400 * TK.tmax; let lg;
+    if (Math.abs(r - 1) < 1e-3) lg = K * t / Math.LN10;
+    else { const b = 1 + (1 - r) * K * t; if (b <= 0) { lg = TK.ymax + 1; } else lg = Math.log10(b) / (1 - r); }
+    const y = Math.min(lg, TK.ymax + .2);
+    d += (i ? ' L' : 'M') + tX(t).toFixed(1) + ' ' + tY(y).toFixed(1); last = t;
+    if (lg > TK.ymax) break;
+  }
+  tkPath.setAttribute('d', d); tkArea.setAttribute('d', d + ` L${tX(last)} ${TK.B} L${TK.L} ${TK.B} Z`);
+  const t1 = tAt(r, 10), t2 = tAt(r, 1e5);
+  [[tkDot1, t1, 1], [tkDot2, t2, 5]].forEach(([dot, tt, v]) => { const ok = isFinite(tt) && tt > 0 && tt <= TK.tmax; dot.style.opacity = ok ? 1 : 0; if (ok) { dot.setAttribute('cx', tX(tt)); dot.setAttribute('cy', tY(v)); } });
+  $('#rVal').textContent = r.toFixed(2);
+  const reg = $('#regime'), gap = $('#gapTxt');
+  if (r < .97) { reg.textContent = 'Fizzle: diminishing returns'; reg.style.color = '#5ef2ff'; }
+  else if (r <= 1.03) { reg.textContent = 'Exponential: steady doubling'; reg.style.color = '#8b5cff'; }
+  else { reg.textContent = r > 1.45 ? 'FOOM: near-vertical' : 'Explosion: finite-time singularity'; reg.style.color = '#ff3d9a'; }
+  const g = t2 - t1;
+  if (!isFinite(t2) || t2 > TK.tmax || t2 < 0) gap.innerHTML = 'Superintelligence: <b>not within 20 years</b>';
+  else gap.innerHTML = 'Human-level → superintelligence in <b>' + (g >= 1 ? g.toFixed(1) + ' years' : Math.max(1, Math.round(g * 12)) + ' months') + '</b>';
+}
+const rr = $('#rRange'); rr.addEventListener('input', () => drawTakeoff(+rr.value)); drawTakeoff(+rr.value);
+
+/* ---------- chessboard ---------- */
+const board = $('#board'); for (let i = 0; i < 64; i++) { const s = document.createElement('div'); s.className = 'sq'; board.appendChild(s); }
+let chessTimer = null;
+const fmt = n => n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+function startChess() {
+  stopChess(); const sq = [...board.children]; sq.forEach(s => { s.style.background = ''; s.style.boxShadow = ''; s.classList.remove('on'); });
+  let i = 0; const out = $('#chessCount');
+  out.innerHTML = '<small>Square 1</small>1 grain';
+  const step = () => {
+    if (i >= 64) { out.innerHTML = '<small>Square 64</small><span class="hot">' + fmt(2n ** 63n) + '</span> grains<br><span style="font-size:.55em;color:var(--mute)">≈ 300 years of the world\'s entire rice harvest</span>'; return; }
+    const k = i / 63, s = sq[i], hue = i < 32 ? `rgba(94,242,255,${.12 + k * 1.4})` : `rgba(255,61,154,${.35 + (k - .5) * 1.3})`;
+    s.style.background = hue; s.style.boxShadow = i >= 32 ? `0 0 ${8 + (i - 32)}px rgba(255,61,154,${.2 + (i - 32) / 50})` : 'none'; s.classList.add('on');
+    out.innerHTML = `<small>Square ${i + 1}${i === 31 ? ' · halfway' : ''}</small>${fmt(2n ** BigInt(i))} grain${i ? 's' : ''}`;
+    i++; chessTimer = setTimeout(step, i < 32 ? 70 : 120);
+  };
+  chessTimer = setTimeout(step, 900);
+}
+function stopChess() { clearTimeout(chessTimer); }
+
+/* ---------- loop ---------- */
+let loopOn = false, loopA = 0, loopV = 0, gen = 1;
+const orbit = $('#orbit');
+function tickLoop(dt) {
+  loopV = Math.min(loopV * (1 + .006 * dt) + .0004 * dt, .5); const prev = loopA; loopA += loopV * dt;
+  if (Math.floor(loopA / TAU) > Math.floor(prev / TAU)) { gen++; $('#gen').textContent = gen > 999 ? '∞' : gen; }
+  $('#genSpeed').textContent = (loopV / .02).toFixed(1) + '× speed';
+  orbit.setAttribute('transform', `rotate(${loopA * 180 / Math.PI} 50 50)`);
+  if (loopV >= .5) camT.spin = 14;
+}
+
+/* ---------- counters ---------- */
+const countTimers = [];
+function runCounters(el) {
+  el.querySelectorAll('[data-count]').forEach(c => {
+    const end = +c.dataset.count, t0 = performance.now() + 500, dur = 2600;
+    const tick = now => { const p = Math.max(0, Math.min(1, (now - t0) / dur)), e = p === 1 ? 1 : 1 - Math.pow(2, -10 * p); c.textContent = fmt(Math.round(end * e)); if (p < 1) countTimers.push(requestAnimationFrame(tick)); };
+    c.textContent = '0'; countTimers.push(requestAnimationFrame(tick));
+  });
+}
+
+/* ---------- compression ticks ---------- */
+const tr = $('#tickrow'); for (let i = 0; i <= 100; i++) tr.appendChild(document.createElement('i'));
+
+/* ---------- navigation ---------- */
+let cur = -1, thenTimer = null;
+const dots = $('#dots');
+slides.forEach((s, i) => { const b = document.createElement('button'); b.type = 'button'; b.setAttribute('aria-label', `Slide ${i + 1}: ${s.dataset.title}`); b.addEventListener('click', e => { e.stopPropagation(); go(i); }); dots.appendChild(b); });
+const pad = n => String(n).padStart(2, '0');
+function go(n) {
+  n = Math.max(0, Math.min(slides.length - 1, n)); if (n === cur) return;
+  const prevEl = slides[cur]; cur = n; const el = slides[n];
+  slides.forEach((s, i) => { s.classList.toggle('active', i === n); s.classList.toggle('past', i < n); s.setAttribute('aria-hidden', i !== n); s.inert = i !== n; });
+  el.scrollTop = 0;
+  clearTimeout(thenTimer); stopChess(); loopOn = false; countTimers.forEach(cancelAnimationFrame); countTimers.length = 0;
+  applyCfg(el);
+  const hook = el.dataset.hook;
+  if (hook === 'chess') startChess();
+  if (hook === 'loop') { loopOn = true; loopA = 0; loopV = .02; gen = 1; $('#gen').textContent = '1'; }
+  if (el.dataset.then) thenTimer = setTimeout(() => { setShape(el.dataset.then); for (let i = 0; i < N; i++) ease[i] = .03 + rnd() * .09; camT.dim = .55; camT.spin = .5; pulse = .5; trail = .05; }, +el.dataset.thenDelay || 1500);
+  runCounters(el);
+  $('#progress').style.width = ((n + 1) / slides.length * 100) + '%';
+  $('#count').textContent = `${pad(n + 1)} / ${pad(slides.length)}`;
+  $('#secName').textContent = el.dataset.title;
+  [...dots.children].forEach((d, i) => d.classList.toggle('on', i === n));
+  $('#live').textContent = `Slide ${n + 1} of ${slides.length}: ${el.dataset.title}`;
+  history.replaceState(null, '', '#' + (n + 1));
+  const sp = { cyan: 'rgba(94,242,255,.09)', violet: 'rgba(139,92,255,.11)', magenta: 'rgba(255,61,154,.10)', gold: 'rgba(255,198,92,.10)', red: 'rgba(255,59,59,.12)', ice: 'rgba(160,215,255,.08)', green: 'rgba(90,255,180,.08)' }[el.dataset.pal] || 'rgba(139,92,255,.1)';
+  $('#spot').style.background = `radial-gradient(circle, ${sp}, transparent 60%)`;
+}
+const next = () => go(cur + 1), prev = () => go(cur - 1);
+$('#next').addEventListener('click', e => { e.stopPropagation(); next(); });
+$('#prev').addEventListener('click', e => { e.stopPropagation(); prev(); });
+$('#replay').addEventListener('click', e => { e.stopPropagation(); go(0); });
+addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) return;
+  if (['ArrowRight', 'PageDown', ' ', 'Enter'].includes(e.key)) { if (e.key === 'Enter' && e.target.tagName === 'BUTTON') return; e.preventDefault(); next(); }
+  else if (['ArrowLeft', 'PageUp', 'Backspace'].includes(e.key)) { e.preventDefault(); prev(); }
+  else if (e.key === 'Home') go(0); else if (e.key === 'End') go(slides.length - 1);
+  else if (e.key.toLowerCase() === 'f') { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.().catch(() => {}); }
+});
+let wheelLock = 0;
+addEventListener('wheel', e => {
+  const el = slides[cur]; if (el.scrollHeight > el.clientHeight + 4) { const atEnd = el.scrollTop + el.clientHeight >= el.scrollHeight - 2, atTop = el.scrollTop <= 0; if ((e.deltaY > 0 && !atEnd) || (e.deltaY < 0 && !atTop)) return; }
+  const now = Date.now(); if (now < wheelLock || Math.abs(e.deltaY) < 24) return; wheelLock = now + 1100; e.deltaY > 0 ? next() : prev();
+}, { passive: true });
+let tx0 = null, ty0 = 0;
+addEventListener('touchstart', e => { tx0 = e.touches[0].clientX; ty0 = e.touches[0].clientY; }, { passive: true });
+addEventListener('touchend', e => {
+  if (tx0 === null) return; const dx = e.changedTouches[0].clientX - tx0, dy = e.changedTouches[0].clientY - ty0; tx0 = null;
+  if (e.target.closest('input')) return;
+  if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.2) { dx < 0 ? next() : prev(); }
+}, { passive: true });
+document.addEventListener('click', e => {
+  if (e.target.closest('button,a,input,label,.ctrl,.card')) return;
+  if (getSelection().toString()) return;
+  e.clientX < innerWidth * .25 ? prev() : next();
+});
+
+const start = Math.max(0, Math.min(slides.length - 1, (parseInt(location.hash.slice(1), 10) || 1) - 1));
+document.fonts?.ready.then(() => { for (const k in textCache) delete textCache[k]; if (slides[cur]?.dataset.shape?.startsWith('text')) setShape(slides[cur].dataset.shape); });
+requestAnimationFrame(() => { go(start); requestAnimationFrame(frame); });
+})();
+</script>
+</body>
+</html>
