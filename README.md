@@ -30,7 +30,7 @@ the preview does not deploy or change the existing live site.
 ## Checks
 
 ```bash
-node --check app.js
+node --check app.js motion.js
 npm install --no-save --package-lock=false playwright
 npx playwright install chromium
 node tests/smoke.cjs
@@ -60,7 +60,7 @@ is required for initial setup and publishing changes.
    first run happened before Pages was enabled, rerun the failed workflow.
 6. Verify the Actions deployment and the live site before claiming it is published.
 
-The workflow stages only `index.html`, `styles.css`, `app.js`, `favicon.svg`,
+The workflow stages only `index.html`, `styles.css`, `app.js`, `motion.js`, `favicon.svg`,
 `social-card.svg`, `.nojekyll`, and `assets/`. Tests, documentation, previews, and
 local configuration are not included in the published artifact.
 
@@ -69,6 +69,8 @@ local configuration are not included in the published artifact.
 - `index.html`: profile copy, email, project links, and metadata.
 - `styles.css`: colors, responsive layouts, and reduced-motion styling.
 - `app.js`: panel/phone navigation, theme, filters, and clipboard behavior.
+- `motion.js`: every animation and pointer effect, layered on `app.js` events.
+  Motion tokens and rules live in `DESIGN.md`.
 - `assets/avatar.png`: public GitHub avatar snapshot.
 - `social-card.svg` and `assets/social-card.png`: editable share graphic and its
   browser-compatible PNG export. Regenerate the PNG if the graphic changes.

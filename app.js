@@ -11,30 +11,51 @@ const themeToggle = document.querySelector('#theme-toggle');
 const filterButtons = [...document.querySelectorAll('#project-filters [data-filter]')];
 const cards = [...document.querySelectorAll('.project-card[data-category]')];
 const count = document.querySelector('#project-count');
+const projectKeys = ['canteen', 'workout', 'pos', 'inventory', 'ohman'];
 let selected = 'overview';
 let invoker = null;
 let filter = 'all';
 
+// motion.js listens for these. Each fires synchronously, so state is never deferred.
+const emit = (name, detail) => document.dispatchEvent(new CustomEvent(`portfolio:${name}`, { detail }));
+
 document.querySelector('#year').textContent = new Date().getFullYear();
 
+const clock = document.querySelector('#phone-clock');
+function tick() {
+  const now = new Date();
+  clock.textContent = `${now.getHours() % 12 || 12}:${String(now.getMinutes()).padStart(2, '0')}`;
+}
+tick();
+setInterval(tick, 15000);
+
+// data-theme is the preference and changes at once. data-look is what the
+// stylesheet paints; motion.js may move it inside a view transition.
 let savedTheme;
 try { savedTheme = localStorage.getItem('theme'); } catch { /* Storage is optional. */ }
-function setTheme(theme) {
+function setTheme(theme, { animate = false, origin = null } = {}) {
   root.dataset.theme = theme;
   const label = `Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`;
   themeToggle.setAttribute('aria-pressed', String(theme === 'dark'));
   themeToggle.setAttribute('aria-label', label);
   themeToggle.title = label;
+  const event = new CustomEvent('portfolio:theme', { detail: { theme, animate, origin }, cancelable: true });
+  // A listener that animates the change calls preventDefault and sets data-look itself.
+  if (document.dispatchEvent(event)) root.dataset.look = theme;
 }
 setTheme(['light', 'dark'].includes(savedTheme) ? savedTheme :
   (window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
-themeToggle.addEventListener('click', () => {
+themeToggle.addEventListener('click', event => {
   const theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
-  setTheme(theme);
+  const box = themeToggle.getBoundingClientRect();
+  const origin = event.clientX || event.clientY ? { x: event.clientX, y: event.clientY } : { x: box.left + box.width / 2, y: box.top + box.height / 2 };
+  setTheme(theme, { animate: true, origin });
   try { localStorage.setItem('theme', theme); } catch { /* Preference remains for this page. */ }
 });
 
 function applyFilter(value) {
+  const changed = value !== filter;
+  if (changed) emit('beforefilter', { value });
   filter = value;
   let visible = 0;
   cards.forEach(card => {
@@ -46,13 +67,16 @@ function applyFilter(value) {
   });
   filterButtons.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.filter === value)));
   count.textContent = `${visible} ${visible === 1 ? 'project' : 'projects'}`;
+  if (changed) emit('filter', { value });
 }
 filterButtons.forEach(button => button.addEventListener('click', () => applyFilter(button.dataset.filter)));
 
 function reveal(key, { source = null, updateHash = false, focus = false } = {}) {
   if (!panels.some(panel => panel.dataset.panel === key)) return;
+  const from = selected;
   const leavingSheet = selected !== 'overview' && key === 'overview';
   if (key !== 'overview' && source?.isConnected && !sheet.contains(source)) invoker = source;
+  emit('beforereveal', { from, to: key, source });
   selected = key;
   panels.forEach(panel => { panel.hidden = panel.dataset.panel !== key; });
   homeScreen.hidden = key !== 'overview';
@@ -69,6 +93,11 @@ function reveal(key, { source = null, updateHash = false, focus = false } = {}) 
     if (link.dataset.open === key) link.setAttribute('aria-current', 'page');
     else link.removeAttribute('aria-current');
   });
+  const section = projectKeys.includes(key) ? 'projects' : key;
+  document.querySelectorAll('.nav-links a[data-open]').forEach(link => {
+    if (link.dataset.open === section) link.setAttribute('aria-current', 'page');
+    else link.removeAttribute('aria-current');
+  });
   if (updateHash) history.replaceState(null, '', `#${key === 'overview' ? 'home' : key}`);
   if (focus) {
     if (leavingSheet) {
@@ -76,6 +105,7 @@ function reveal(key, { source = null, updateHash = false, focus = false } = {}) 
       else document.querySelector('.brand').focus();
     } else if (key !== 'overview') back.focus();
   }
+  emit('reveal', { from, to: key, source });
 }
 
 document.addEventListener('click', event => {
@@ -102,8 +132,10 @@ copyEmail.addEventListener('click', async () => {
   try {
     await navigator.clipboard.writeText(copyEmail.dataset.email);
     status.textContent = 'Email copied to clipboard.';
+    emit('copied', { ok: true, source: copyEmail });
   } catch {
     status.textContent = 'Could not copy. Use the email link instead.';
+    emit('copied', { ok: false, source: copyEmail });
   }
 });
 
