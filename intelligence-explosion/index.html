@@ -1701,7 +1701,7 @@ void main(){ float t=max(uT,0.); float k=1.-exp(-t*1.2);
 // =====================================================================
 
 {
-  const mat = shader(`uniform float uT,uAsp,uMix,uFrom,uTo,uSpeed,uZoom,uResY; uniform vec2 uOff;
+  const mat = shader(`uniform float uT,uAsp,uMix,uFrom,uTo,uSpeed,uZoom,uResY; uniform vec2 uOff,uMouse;
 #define BLK vec3(.07,.065,.06)
 #define PAP vec3(.95,.92,.86)
 #define YEL vec3(.97,.78,.05)
@@ -1756,17 +1756,24 @@ vec3 posterC(vec2 p,float t){
   float hb=.46+.02*sin(t*4.4); ink(c,PAP,sdBox(q-vec2(0.,hb),vec2(.56,.012)));
   return c; }
 vec3 poster(float i,vec2 p,float t){ return i<.5?posterA(p,t):i<1.5?posterB(p,t):posterC(p,t); }
+
 void main(){
   vec2 p=(vUv-.5)*vec2(uAsp,1.); px=1.2*uZoom/uResY;
-  vec2 q=(p-uOff)*uZoom;
+  vec2 q=(p-uOff-uMouse*.035)*uZoom;
   vec3 A=poster(uFrom,q,uT*uSpeed), B=poster(uTo,q,uT*uSpeed);
   float m=1.-smoothstep(uMix*1.3-.02,uMix*1.3,length(p-uOff)*.9);
   vec3 c=mix(A,B,m);
   // print texture: misregistered ink + paper fibres
   c*=.94+.06*vnoise(vUv*vec2(uAsp,1.)*900.);
   c=mix(c,c*vec3(.98,.96,.92),.5);
-  gl_FragColor=vec4(toLin(c),1.); }`, { uT: { value: 0 }, uAsp: { value: 1.78 }, uMix: { value: 1 }, uFrom: { value: 0 }, uTo: { value: 0 }, uSpeed: { value: 1 }, uZoom: { value: 1.1 }, uResY: { value: 1080 }, uOff: { value: new THREE.Vector2() } });
+  gl_FragColor=vec4(toLin(c),1.); }`, { uT: { value: 0 }, uAsp: { value: 1.78 }, uMix: { value: 1 }, uFrom: { value: 0 }, uTo: { value: 0 }, uSpeed: { value: 1 }, uZoom: { value: 1.1 }, uResY: { value: 1080 }, uOff: { value: new THREE.Vector2() }, uMouse: { value: new THREE.Vector2() } });
 
+  // ink depth: a second, cheap pass darkens bare paper wherever an ink shape sits up-and-left of it
+  const shade = shader(`uniform sampler2D tSrc; uniform vec3 uBg; uniform vec2 uOff;
+void main(){ vec3 c=texture(tSrc,vUv).rgb; vec3 s=texture(tSrc,vUv+uOff).rgb; vec3 s2=texture(tSrc,vUv+uOff*.5).rgb;
+  float onBg=1.-smoothstep(.01,.05,length(c-uBg)); float cst=smoothstep(.01,.05,length(s-uBg))*.6+smoothstep(.01,.05,length(s2-uBg))*.4;
+  gl_FragColor=vec4(c*(1.-.34*onBg*cst),1.); }`, { tSrc: { value: null }, uBg: { value: new THREE.Vector3() }, uOff: { value: new THREE.Vector2() } });
+  const BGS = ['#f2ebdb', '#2b29a8', '#121110'].map(h => new THREE.Color(h));
   const INK = ['#121110', '#f2ece0', '#f2ece0'];
   SCENES.push({
     id: 'loop', title: 'The loop', enterWith: 'slam', hud: { color: '#121110' },
@@ -1793,8 +1800,10 @@ void main(){
           const u = mat.uniforms; u.uT.value = tt; u.uAsp.value = V.W / V.H; u.uSpeed.value = 1;
           const b = s.beat; u.uTo.value = b; u.uFrom.value = Math.max(0, b - 1); u.uMix.value = b === 0 ? 1 : E.io3(s.p[b]);
           if (s.dir < 0) { u.uFrom.value = b; u.uTo.value = b; u.uMix.value = 1; }
-          u.uOff.value.set(V.portrait ? 0 : V.W / V.H * (b === 2 ? .26 : .2), V.portrait ? -.18 : -.02); u.uZoom.value = b === 2 ? 1.5 : 1.1;
-          u.uResY.value = slot.hdr.height; pass(mat, slot.hdr);
+          u.uMouse.value.set(s.mouse.x, s.mouse.y); u.uOff.value.set(V.portrait ? 0 : V.W / V.H * (b === 2 ? .26 : .2), V.portrait ? -.18 : -.02); u.uZoom.value = b === 2 ? 1.5 : 1.1;
+          u.uResY.value = slot.hdr.height; pass(mat, slot.aux);
+          const bgc = BGS[u.uMix.value > .5 ? u.uTo.value : u.uFrom.value]; shade.uniforms.uBg.value.set(Math.pow(bgc.r, 2.2), Math.pow(bgc.g, 2.2), Math.pow(bgc.b, 2.2));
+          shade.uniforms.tSrc.value = slot.aux.texture; shade.uniforms.uOff.value.set(-.011 / (V.W / V.H), .016); pass(shade, slot.hdr);
         },
         draw2d(g, s) {
           const W = V.W, H = V.H, k = Math.min(W / 1920, H / 1080) * (V.portrait ? 1.6 : 1), x = (V.portrait ? 60 : 110) * k, y = V.portrait ? H * .1 : H * .16;
