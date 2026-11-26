@@ -288,5 +288,6 @@ void main(){
     c=mix(c,texture(tB,vUv).rgb,smoothstep(.85,1.,uv.y)*t); }
   gl_FragColor=vec4(c,1.); }`);
 
+T.slam.linear = true; // its impact is timed to linear progress
 const TRANSITIONS = T;
 export { TRANSITIONS };

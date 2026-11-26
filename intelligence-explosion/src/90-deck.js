@@ -16,7 +16,7 @@ function makeSlot() {
   return { hdr: null, aux: null, ldr: null, oc, og, otex, owner: -1 };
 }
 const slots = [makeSlot(), makeSlot()];
-let trRT = null;
+let trRT = null, accRT = [null, null], accI = 0;
 function sizeSlots() {
   for (const s of slots) {
     [s.hdr, s.aux, s.ldr].forEach(r => r && r.dispose());
@@ -24,6 +24,7 @@ function sizeSlots() {
     s.oc.width = PW; s.oc.height = PH; s.otex.dispose();
   }
   trRT && trRT.dispose(); trRT = makeRT(PW, PH, { ldr: true });
+  accRT.forEach(r => r && r.dispose()); accRT = [makeRT(PW, PH, { ldr: true }), makeRT(PW, PH, { ldr: true })];
 }
 function resize() {
   CW = innerWidth; CH = innerHeight;
@@ -36,6 +37,7 @@ function resize() {
 }
 const canvas2 = R.domElement;
 
+const mAccum = shader(`uniform sampler2D tCur, tPrev; uniform float uK; void main(){ gl_FragColor=vec4(mix(texture(tCur,vUv).rgb,texture(tPrev,vUv).rgb,uK),1.); }`, { tCur: { value: null }, tPrev: { value: null }, uK: { value: 0 } });
 // ---------- present pass (dither + black) ----------
 const mPresent = shader(`uniform sampler2D tSrc; uniform float uBlack, uTime;
 void main(){ vec3 c=texture(tSrc,vUv).rgb; c+= (hash13(vec3(gl_FragCoord.xy,fract(uTime)*91.))-.5)/255.; gl_FragColor=vec4(c*(1.-uBlack),1.); }`, { tSrc: { value: null }, uBlack: { value: 0 }, uTime: { value: 0 } });
@@ -121,12 +123,16 @@ function goScene(i, dir) {
   const from = cur;
   if (dir > 0) {
     const t = TRANSITIONS[scenes[i].def.enterWith] || TRANSITIONS.fade;
-    enterScene(i, false, 1); tr = { A: from, B: i, t: 0, dur: t.dur, T: t, rev: false };
+    enterScene(i, false, 1); tr = { A: from, B: i, t: 0, dur: t.dur, T: t, rev: false, speed: 1, fresh: true };
   } else {
     const t = TRANSITIONS[scenes[from].def.enterWith] || TRANSITIONS.fade;
-    enterScene(i, true, -1); tr = { A: i, B: from, t: 0, dur: t.dur * .55, T: t, rev: true };
+    enterScene(i, true, -1); tr = { A: i, B: from, t: 0, dur: t.dur * .7, T: t, rev: true, speed: 1, fresh: true };
   }
-  if (tr.T.sound) AU.hit(tr.T.sound);
+  // crossfade the two soundscapes across the transition, and play the transition's own sound design
+  const inc = scenes[i], out_ = scenes[from];
+  if (out_.bed) out_.bed.set(0, null, tr.dur * .35);
+  if (inc.bed) inc.bed.set(inc.def.bed.level?.[inc.s.beat] ?? .5, inc.def.bed.cut, tr.dur * .3);
+  AU.trans(tr.T.id, tr.dur, tr.rev);
 }
 function finishTr() {
   if (!tr) return;
@@ -135,13 +141,13 @@ function finishTr() {
   exitScene(leaving); cur = target; tr = null; syncUI();
 }
 function next() {
-  if (tr) { tr.t = tr.dur; return; }
+  if (tr) { tr.speed = Math.min(tr.speed * 2.5, 8); return; }
   const sc = scenes[cur], s = sc.s;
   if (s.beat < s.beats.length - 1) { s.beat++; s.dir = 1; sc.hooks.beat && sc.hooks.beat(s, 1); if (sc.bed) sc.bed.set(sc.def.bed.level?.[s.beat] ?? .5); syncUI(); }
   else goScene(cur + 1, 1);
 }
 function back() {
-  if (tr) { tr.t = tr.dur; return; }
+  if (tr) { tr.speed = Math.min(tr.speed * 2.5, 8); return; }
   const sc = scenes[cur], s = sc.s;
   if (s.beat > 0) { s.beat--; s.dir = -1; sc.hooks.beat && sc.hooks.beat(s, -1); if (sc.bed) sc.bed.set(sc.def.bed.level?.[s.beat] ?? .5); syncUI(); }
   else goScene(cur - 1, -1);
@@ -250,22 +256,26 @@ function frame(now) {
   const mk = 1 - Math.exp(-5 * dt); mouse.x += (mouse.tx - mouse.x) * mk; mouse.y += (mouse.ty - mouse.y) * mk;
   // adaptive quality
   dtS += (dt * 1000 - dtS) * .05; qT += dt;
-  if (!HEADLESS && qT > 2.5) {
+  if (!HEADLESS && qT > 2.5 && !tr) {
     if (dtS > 21 && qi < QUAL.length - 1) { qi++; qT = 0; goodT = 0; resize(); }
     else if (dtS < 14.5) { goodT += dt; if (goodT > 5 && qi > 0) { qi--; qT = 0; goodT = 0; resize(); } } else goodT = 0;
   }
   // auto-play
   if (auto && !tr) { const s = scenes[cur].s, b = s.beats[s.beat]; if (s.at(s.beat) > b.dur + b.hold) next(); }
   if (tr) {
-    tr.t += dt; const A = scenes[tr.A], B = scenes[tr.B];
+    tr.t += Math.min(dt, 1 / 30) * tr.speed; const A = scenes[tr.A], B = scenes[tr.B];
     stepState(A, dt); stepState(B, dt);
     // slot 0 = the scene we're heading to, slot 1 = the scene we're leaving
     const goingTo = tr.rev ? A : B, leaving = tr.rev ? B : A;
     renderScene(goingTo, slots[0]); renderScene(leaving, slots[1]);
-    const p = clamp(tr.t / tr.dur), P = tr.rev ? 1 - p : p;
+    const p = clamp(tr.t / tr.dur), pe = tr.T.linear ? p : .5 - .5 * Math.cos(Math.PI * p), P = tr.rev ? 1 - pe : pe;
     const m = tr.T.mat; m.uniforms.tA.value = (tr.rev ? slots[0] : slots[1]).ldr.texture; m.uniforms.tB.value = (tr.rev ? slots[1] : slots[0]).ldr.texture;
     m.uniforms.uP.value = P; m.uniforms.uTime.value = tNow; m.uniforms.uAsp.value = CW / CH;
-    pass(m, trRT); present(trRT);
+    pass(m, trRT);
+    // motion-blur trail: blend with the previous transition frame, strongest mid-way, none at the ends
+    const prev = accRT[accI], nxt = accRT[1 - accI];
+    mAccum.uniforms.tCur.value = trRT.texture; mAccum.uniforms.tPrev.value = prev.texture; mAccum.uniforms.uK.value = tr.fresh ? 0 : .55 * Math.sin(Math.PI * p);
+    pass(mAccum, nxt); accI = 1 - accI; tr.fresh = false; present(nxt);
     if (p >= 1) finishTr();
   } else {
     const sc = scenes[cur]; stepState(sc, dt); renderScene(sc, slots[1]); present(slots[1].ldr);

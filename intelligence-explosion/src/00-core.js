@@ -480,6 +480,74 @@ const AU = (() => {
     g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(peak, t + dur * .35); g.gain.linearRampToValueAtTime(0, t + dur);
     out(g, .9, 'hall', .1, pan); o.start(t); o2.start(t); o.stop(t + dur + .1); o2.stop(t + dur + .1);
   }
+  // ---------- futuristic transition kit ----------
+  // Building blocks, scheduled against a transition's duration so each sound peaks with its visual climax.
+  function revSwell(t, dur, peak, f0 = 400, f1 = 7000, pan = 0) { // reverse-cymbal style swell that cuts at t+dur
+    const s = ac.createBufferSource(); s.buffer = noiseBuf; s.loop = true; const fl = ac.createBiquadFilter(); fl.type = 'bandpass'; fl.Q.value = 1.2;
+    fl.frequency.setValueAtTime(f0, t); fl.frequency.exponentialRampToValueAtTime(f1, t + dur);
+    const g = ac.createGain(); g.gain.setValueAtTime(1e-4, t); g.gain.exponentialRampToValueAtTime(peak, t + dur); g.gain.linearRampToValueAtTime(0, t + dur + .04);
+    s.connect(fl); fl.connect(g); out(g, .35, 'hall', .15, pan); s.start(t); s.stop(t + dur + .1);
+  }
+  function sweepSaw(t, dur, f0, f1, peak, q = 9, c0 = 300, c1 = 6000, wet = .4) { // resonant synth riser / faller
+    const fl = ac.createBiquadFilter(); fl.type = 'lowpass'; fl.Q.value = q; fl.frequency.setValueAtTime(c0, t); fl.frequency.exponentialRampToValueAtTime(c1, t + dur);
+    const g = ac.createGain(); g.gain.setValueAtTime(1e-4, t); g.gain.exponentialRampToValueAtTime(peak, t + dur * .85); g.gain.exponentialRampToValueAtTime(1e-4, t + dur + .25);
+    for (const det of [1, 1.006, .497]) { const o = ac.createOscillator(); o.type = 'sawtooth'; o.frequency.setValueAtTime(f0 * det, t); o.frequency.exponentialRampToValueAtTime(f1 * det, t + dur); o.connect(fl); o.start(t); o.stop(t + dur + .3); }
+    fl.connect(g); out(g, wet, 'hall', .25);
+  }
+  function laser(t, dur, f0, f1, peak, pan = 0) { // charging / discharging energy tone with accelerating tremolo
+    const o = ac.createOscillator(), g = ac.createGain(), tr = ac.createOscillator(), tg = ac.createGain(); o.type = 'sine';
+    o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+    tr.frequency.setValueAtTime(6, t); tr.frequency.exponentialRampToValueAtTime(40, t + dur); tg.gain.value = peak * .5;
+    g.gain.setValueAtTime(1e-4, t); g.gain.exponentialRampToValueAtTime(peak, t + dur * .9); g.gain.exponentialRampToValueAtTime(1e-4, t + dur + .08);
+    tr.connect(tg); tg.connect(g.gain); o.connect(g); out(g, .3, 'hall', .3, pan); o.start(t); tr.start(t); o.stop(t + dur + .1); tr.stop(t + dur + .1);
+  }
+  function clang(t, f, peak) { fm(f, 1.414, 4, t, 1.6, peak, .6, .3); fm(f * 2.76, 1.7, 2, t, 1.1, peak * .5, .6, .3, .3); noise(t, .05, peak * 1.5, 'highpass', 4000, 1, null, .2, .001); }
+  function subDrop(t, peak = .8, f0 = 130, f1 = 28, dur = 1.1) { osc('sine', f0, t, dur, peak, .004, .2, f1); osc('triangle', f0 * 2, t, .25, peak * .3, .002, .2, f1 * 2); }
+  function chatter(t, dur, n, peak = .05, lo = 600, hi = 4000) { for (let i = 0; i < n; i++) { const tt = t + Math.random() * dur, f = lo * Math.pow(hi / lo, Math.random()); osc(Math.random() < .5 ? 'square' : 'sine', f, tt, .015 + Math.random() * .04, peak, .001, .15, Math.random() < .3 ? f * 1.5 : null, 'room', .25, (Math.random() - .5) * 1.8); } }
+  function jet(t, dur, peak, up = true) { // flanger sweep: noise through a short feedback delay whose time glides
+    const s = ac.createBufferSource(); s.buffer = noiseBuf; s.loop = true; const d = ac.createDelay(.05), fb = ac.createGain(), g = ac.createGain(), hp = ac.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 300;
+    d.delayTime.setValueAtTime(up ? .012 : .0008, t); d.delayTime.exponentialRampToValueAtTime(up ? .0008 : .012, t + dur); fb.gain.value = .82;
+    s.connect(hp); hp.connect(d); d.connect(fb); fb.connect(d); hp.connect(g); d.connect(g);
+    g.gain.setValueAtTime(1e-4, t); g.gain.exponentialRampToValueAtTime(peak, t + dur * .5); g.gain.exponentialRampToValueAtTime(1e-4, t + dur);
+    out(g, .3, 'hall', .1); s.start(t); s.stop(t + dur + .05);
+  }
+  function sonar(t, f, peak) { osc('sine', f, t, 1.4, peak, .004, .5, f * .98, 'hall', .55); osc('sine', f * 2.01, t, .4, peak * .3, .002, .5, null, 'hall', .4); }
+  function servo(t, dur, peak) { const o = ac.createOscillator(), l = ac.createOscillator(), lg = ac.createGain(), bp = ac.createBiquadFilter(), g = ac.createGain(); o.type = 'sawtooth'; o.frequency.setValueAtTime(70, t); o.frequency.linearRampToValueAtTime(140, t + dur);
+    l.frequency.value = 9; lg.gain.value = 25; l.connect(lg); lg.connect(o.frequency); bp.type = 'bandpass'; bp.frequency.value = 900; bp.Q.value = 3;
+    g.gain.setValueAtTime(1e-4, t); g.gain.linearRampToValueAtTime(peak, t + .08); g.gain.setValueAtTime(peak, t + dur - .1); g.gain.linearRampToValueAtTime(1e-4, t + dur);
+    o.connect(bp); bp.connect(g); out(g, .15, 'room'); o.start(t); l.start(t); o.stop(t + dur + .05); l.stop(t + dur + .05); }
+  let crushCurve = null;
+  function crush(t, dur, peak, f = 300) { // bit-crushed square burst
+    if (!crushCurve) { crushCurve = new Float32Array(256); for (let i = 0; i < 256; i++) crushCurve[i] = Math.round((i / 127.5 - 1) * 3) / 3; }
+    const o = ac.createOscillator(), ws = ac.createWaveShaper(), g = ac.createGain(); o.type = 'square'; o.frequency.setValueAtTime(f, t); o.frequency.exponentialRampToValueAtTime(f * .25, t + dur); ws.curve = crushCurve;
+    g.gain.setValueAtTime(peak, t); g.gain.exponentialRampToValueAtTime(1e-4, t + dur); o.connect(ws); ws.connect(g); out(g, .15, 'room', .2); o.start(t); o.stop(t + dur + .05);
+    noise(t, dur * .6, peak * .8, 'bandpass', 2400, 2, 400, .1, .001);
+  }
+  function stutter(t, f, n, gap, peak) { for (let i = 0; i < n; i++) osc('square', f * (1 + (i % 3) * .5), t + i * gap, gap * .6, peak, .001, .1, null, 'room', .2, (i % 2 ? .6 : -.6)); }
+  const pick = a => a[Math.floor(Math.random() * a.length)];
+  const TR = {
+    portal: (t, d) => { revSwell(t, d * .55, .5); sweepSaw(t, d * .55, note(0, 2), note(0, 4), .07); subDrop(t + d * .55, .9); fm(note(pick([4, 7, 9]), 6), 2, 1.5, t + d * .55, 2, .05, .9, .45); chatter(t + d * .55, .6, 10, .03, 2000, 7000); },
+    line: (t, d) => { laser(t, d * .48, 180, 2600, .12); jet(t, d * .5, .18, true); clang(t + d * .5, note(pick([0, 4]), 4), .12); osc('sine', 3000, t + d * .5, d * .5, .06, .002, .4, 120); subDrop(t + d * .52, .55, 90, 30, .8); },
+    flaps: (t, d) => { servo(t, d * .9, .15); sweepSaw(t, d * .7, note(0, 3), note(4, 4), .06, 10); for (let i = 0; i < 26; i++) noise(t + d * .1 + (i / 26) * d * .75 + Math.random() * .02, .02, .34, 'bandpass', 1800 + Math.random() * 1600, 3, null, .1, .001, 'room', null, 0, -.8 + (i / 26) * 1.6); chatter(t, d, 18, .05, 1200, 5000); ding2(t + d * .92); subDrop(t + d * .9, .4, 100, 40, .6); },
+    wash: (t, d) => { jet(t, d * .9, .25, false); noise(t, d, .35, 'lowpass', 250, .8, 3000, .5, d * .4, 'hall', brownBuf); fm(note(2, 5), 1.5, .8, t + d * .5, 2, .04, .9, .4); },
+    slam: (t, d) => { const c = d * .285; revSwell(t, c, .6, 300, 9000); sweepSaw(t, c, note(0, 3), note(0, 5), .08, 12); clang(t + c, note(pick([0, 2]), 3), .18); subDrop(t + c, 1, 140, 26, 1.3); crush(t + c, .35, .12, 220); noise(t + c, 1.2, .25, 'highpass', 6000, .7, 2000, .6, .001); },
+    daybreak: (t, d) => { [0, 4, 7, 11, 14].forEach((dg, i) => fm(note(dg, 4), 1, .6, t + i * .18, d * .9, .04, .9, .35, Math.sin(i * 1.7) * .7)); revSwell(t, d * .5, .25, 800, 9000); sonar(t + d * .5, note(7, 6), .07); vowel(note(0, 3), t + d * .3, d, .05); vowel(note(7, 3), t + d * .35, d, .04, .4); },
+    dissolve: (t, d) => { chatter(t, d * .9, 40, .03, 300, 9000); const lp = 1; noise(t, d, .15, 'lowpass', 400, 4, 9000, .4, d * .5); sonar(t + d * .85, note(4, 6), .05); },
+    tear: (t, d) => { for (let i = 0; i < 46; i++) noise(t + d * .15 + i * .022 * (1 + Math.random() * .3), .025 + Math.random() * .03, .16 + Math.random() * .18, 'bandpass', 1500 + Math.random() * 3500, 1.5, null, .08, .001, 'room', null, 0, -.7 + i / 46 * 1.4); sweepSaw(t, d * .6, note(0, 4), note(0, 2), .09, 14, 6000, 300); laser(t, d * .4, 300, 2400, .07); subDrop(t + d * .6, .7); clang(t + d * .6, note(4, 4), .08); },
+    radial: (t, d) => { sonar(t, note(4, 5), .09); jet(t, d, .2, true); chatter(t + d * .3, d * .6, 12, .03); },
+    glitch: (t, d) => { crush(t, .18, .16, 440); stutter(t + .12, note(pick([0, 4, 7]), 5), 9, .045, .06); chatter(t, d * .8, 34, .05, 200, 8000); crush(t + d * .55, .25, .14, 160); osc('sawtooth', 1200, t + d * .5, .35, .08, .002, .2, 60); },
+    shatter: (t, d) => { revSwell(t, d * .12 + .15, .45, 1000, 9000); const c = t + d * .12 + .15; noise(c, .4, .55, 'highpass', 2500, .7, 9000, .4, .001); for (let i = 0; i < 30; i++) fm(2400 + Math.random() * 5600, 1.53 + Math.random(), 1.5, c + Math.random() * d * .6, .2 + Math.random() * .6, .03, .6, .3, (Math.random() - .5) * 1.8); subDrop(c, .8, 110, 30, 1.2); laser(c + .1, d * .6, 3000, 150, .05); },
+    ink: (t, d) => { subDrop(t, .5, 70, 30, d); noise(t, d, .35, 'lowpass', 120, 2, 1200, .7, d * .5, 'hall', brownBuf); for (let i = 0; i < 12; i++) { const tt = t + d * .2 + Math.random() * d * .7, f = 300 + Math.random() * 900; osc('sine', f, tt, .12, .05, .004, .5, f * .4, 'hall', .3, (Math.random() - .5) * 1.4); } fm(note(4, 5), 1.5, .6, t + d * .55, 2.2, .04, .9, .4); },
+    kaleido: (t, d) => { for (let i = 0; i < 14; i++) fm(note([0, 2, 4, 7, 9, 11][i % 6], 5 + Math.floor(i / 6)), 2.01, 1.1, t + i * d / 18, 1.4, .035, .8, .45, Math.sin(i * .9) * .9); jet(t, d, .16, true); sweepSaw(t, d * .5, note(0, 3), note(7, 4), .05, 8); },
+    zoomblur: (t, d) => { sweepSaw(t, d * .6, 55, 880, .1, 10, 200, 9000); laser(t, d * .6, 120, 4000, .07); revSwell(t, d * .6, .5, 200, 8000); subDrop(t + d * .6, 1, 150, 25, 1.4); chatter(t + d * .6, .5, 12, .03, 3000, 9000); },
+    pixelsort: (t, d) => { for (let i = 0; i < 26; i++) osc('square', 3600 * Math.pow(.87, i), t + i * d / 30, .035, .085, .001, .1, null, 'room', .25, (i % 2 ? .5 : -.5)); servo(t, d * .8, .1); crush(t + d * .75, .3, .16, 120); subDrop(t + d * .75, .6); },
+    fade: (t, d) => { revSwell(t, d * .7, .2, 600, 5000); sonar(t + d * .7, note(4, 6), .05); },
+  };
+  function ding2(t) { fm(note(4, 6), 3.01, 1.2, t, 1.2, .05, .5, .25); }
+  function trans(id, dur, rev) {
+    if (!ac || muted || ac.state !== 'running' || !TR[id]) return;
+    try { TR[id](ac.currentTime + .02, Math.max(.4, dur)); } catch (e) { }
+  }
   function hit(name, v, delay = 0) {
     if (!ac || muted || !HITS[name] || ac.state !== 'running') return;
     const now = ac.currentTime; if (lastHit[name] && now - lastHit[name] < .035) return; lastHit[name] = now;
@@ -515,12 +583,12 @@ const AU = (() => {
       if (o.hum) { [60, 120, 180, 300].forEach((hz, i) => { const h = ac.createOscillator(); h.type = i ? 'sine' : 'sawtooth'; h.frequency.value = hz; const hg = ac.createGain(); hg.gain.value = o.hum / (1 + i * 1.5); h.connect(hg); hg.connect(n.g); h.start(); n.stops.push(h); }); }
       this.nodes = n; this.nextArp = ac.currentTime + .1; this.nextPulse = ac.currentTime + .1;
     }
-    set(level, bright) {
+    set(level, bright, tc) {
       this.level = level; if (!ac) return;
       if (this.killT) { clearTimeout(this.killT); this.killT = null; }
       if (level > 0 && !this.nodes) { this._build(); beds.add(this); }
       if (!this.nodes) return;
-      const t = ac.currentTime; this.nodes.g.gain.cancelScheduledValues(t); this.nodes.g.gain.setTargetAtTime(level, t, level > 0 ? .6 : .5);
+      const t = ac.currentTime; this.nodes.g.gain.cancelScheduledValues(t); this.nodes.g.gain.setTargetAtTime(level, t, tc ?? (level > 0 ? .6 : .5));
       if (bright != null) this.nodes.fl.frequency.setTargetAtTime(bright, t, .8);
       if (level <= 0) this.killT = setTimeout(() => this._kill(), 4000);
     }
@@ -561,7 +629,7 @@ const AU = (() => {
   function tick() { if (!ac || ac.state !== 'running') return; const now = ac.currentTime; beds.forEach(b => b._sched(now)); }
   function level() { if (!ana) return 0; const a = new Float32Array(ana.fftSize); ana.getFloatTimeDomainData(a); let s = 0; for (const x of a) s += x * x; return Math.sqrt(s / a.length); }
   return {
-    init, hit, note, Bed, level, get ctx() { return ac; }, set onInit(f) { onInit = f; },
+    init, hit, trans, note, Bed, level, get ctx() { return ac; }, set onInit(f) { onInit = f; },
     get muted() { return muted; },
     mute(m) { muted = m; if (master) master.gain.setTargetAtTime(m ? 0 : .85, ac.currentTime, .15); },
   };
