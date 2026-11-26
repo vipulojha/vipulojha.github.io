@@ -8,11 +8,11 @@ import { SCENES, THREE, clamp, lerp, E, prng, shader, pass, V, text, SelBox, AU 
 {
   const bg = shader(`uniform float uT,uAsp,uRed; void main(){ vec2 p=(vUv-.5)*vec2(uAsp,1.);
   vec3 c=vec3(.012,.012,.02)+vec3(.35,.03,.02)*uRed*exp(-dot(p,p)*2.)*(.7+.3*fbm(p*3.+uT*.1));
-  c*=.92+.08*sin(vUv.y*900.); gl_FragColor=vec4(c,1.); }`, { uT: { value: 0 }, uAsp: { value: 1.78 }, uRed: { value: 0 } });
+  c*=.92+.08*sin(vUv.y*900.); float band=step(.985,hash11(floor(vUv.y*40.)+floor(uT*6.)*7.)); c+=vec3(.6,.05,.05)*band*uRed*.6; c+=vec3(1.,.2,.15)*exp(-abs(fract(vUv.y-uT*.15)-.5)*90.)*.05*uRed; gl_FragColor=vec4(c,1.); }`, { uT: { value: 0 }, uAsp: { value: 1.78 }, uRed: { value: 0 } });
   const sel = new SelBox();
   const COLS = 64, ROWS = 36;
   SCENES.push({
-    id: 'selectall', title: 'Select all', enterWith: 'dissolve', hud: { color: '#ff5a4a' },
+    id: 'selectall', title: 'Select all', enterWith: 'pixelsort', hud: { color: '#ff5a4a' },
     beats: [{ dur: 3, hold: 2 }, { dur: 3, hold: 4 }, { dur: 4, hold: 3 }, { dur: 4, hold: 6 }],
     bed: { chord: [0, 1, 7], oct: 2, cut: 400, vol: .06, wave: 'sawtooth', level: [.2, .3, .45, .35] },
     notes: [
@@ -55,10 +55,10 @@ import { SCENES, THREE, clamp, lerp, E, prng, shader, pass, V, text, SelBox, AU 
           const x = (V.portrait ? 60 : 120) * k, by = H * .5;
           const shade = (yy, hh) => { const gr = g.createLinearGradient(0, yy - hh, 0, yy + hh); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(.5, 'rgba(0,0,0,.78)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, yy - hh, W, hh * 2); };
           const out = b => s.beat > b ? clamp(s.at(b + 1) / .5) : 0;
-          if (s.beat === 1) { shade(by, 220 * k); text(g, 'Everything selected.', { x, y: by, size: (V.portrait ? 60 : 96) * k, font: 'Unbounded', weight: 300, color: '#fff', track: -.035, anim: 'rise', maxW: W - 2 * x }, s.k(1, .2, 1.4, E.lin)); text(g, 'In August, Anthropic’s monitor reviewed over a billion agent actions and blocked about 1 in 47,000.', { x, y: by + 70 * k, size: 24 * k, font: 'Geist', color: 'rgba(255,255,255,.8)', anim: 'fade', maxW: W - 2 * x }, s.k(1, 1, 2, E.lin)); }
+          if (s.beat === 1) { shade(by, 220 * k); text(g, 'Everything selected.', { x, y: by, size: (V.portrait ? 60 : 96) * k, font: 'Unbounded', weight: 300, color: '#fff', track: -.035, anim: 'glitch', maxW: W - 2 * x }, s.k(1, .2, 1.4, E.lin)); text(g, 'In August, Anthropic’s monitor reviewed over a billion agent actions and blocked about 1 in 47,000.', { x, y: by + 70 * k, size: 24 * k, font: 'Geist', color: 'rgba(255,255,255,.8)', anim: 'fade', maxW: W - 2 * x }, s.k(1, 1, 2, E.lin)); }
           if (s.beat === 2) {
             shade(by, 240 * k);
-            text(g, 'So who’s holding\nthe mouse?', { x, y: by - 40 * k, size: (V.portrait ? 60 : 104) * k, font: 'Unbounded', weight: 300, color: '#fff', track: -.035, anim: 'rise', maxW: W - 2 * x }, s.k(2, .3, 1.6, E.lin));
+            text(g, 'So who’s holding\nthe mouse?', { x, y: by - 40 * k, size: (V.portrait ? 60 : 104) * k, font: 'Unbounded', weight: 300, color: '#fff', track: -.035, anim: 'decode', accent: '#ff5a4a', maxW: W - 2 * x }, s.k(2, .3, 1.6, E.lin));
             // a cursor that moves on its own
             const t = s.at(2), cx = W * (.62 + .2 * Math.sin(t * .9)), cy = H * (.45 + .2 * Math.sin(t * 1.3 + 1));
             g.save(); g.translate(cx, cy); g.scale(2.2 * k, 2.2 * k); g.fillStyle = '#fff'; g.strokeStyle = '#000'; g.lineWidth = 1.2;
@@ -69,7 +69,7 @@ import { SCENES, THREE, clamp, lerp, E, prng, shader, pass, V, text, SelBox, AU 
             const L = [['Alignment.', 'Do systems far smarter than us want what we want, or only act like it while we watch?'], ['Control.', 'Once AI does most AI research, how do people keep a hand on the wheel?'], ['Power.', 'Whoever holds a superintelligence could out-lever any government in history.'], ['Speed.', 'Institutions move in years. This could move in months.']];
             L.forEach(([h, d], i) => {
               const y = H * .22 + i * 150 * k * (V.portrait ? 1.2 : 1), p = s.k(3, .2 + i * .35, 1.2 + i * .35, E.lin);
-              text(g, h, { x, y, size: 54 * k, font: 'Unbounded', weight: 300, color: '#ff5a4a', track: -.03, anim: 'rise' }, p);
+              text(g, h, { x, y, size: 54 * k, font: 'Unbounded', weight: 300, color: '#ff5a4a', track: -.03, anim: 'glitch' }, p);
               text(g, d, { x, y: y + 48 * k, size: 24 * k, font: 'Geist', color: 'rgba(255,255,255,.82)', anim: 'fade', maxW: W - 2 * x }, clamp(p * 1.4 - .3));
             });
           }
@@ -88,12 +88,25 @@ vec3 synthetic(vec2 p,float t){
     c=vec3(.0,.02,.04)+vec3(.1,.9,1.)*l*exp(-z*.12)*.8; }
   for(int i=0;i<6;i++){ float fi=float(i); float x=(fi-2.5)*.28+sin(fi*3.)*.05; float h=.12+hash11(fi)*.35; float d=sdBox(p-vec2(x,h*.5),vec2(.035,h*.5)); c=mix(c,vec3(.01,.02,.03),1.-smoothstep(0.,.003,d)); c+=vec3(.1,.9,1.)*exp(-abs(d)*400.)*.5; }
   c+=vec3(.2,.9,1.)*exp(-abs(p.y)*80.)*.4;
+  // falling data streams
+  float col=floor(p.x*60.); float sp=.3+hash11(col)*.8; float y=fract(p.y*.6+t*sp*.25+hash11(col+3.));
+  float on=step(.6,hash11(col+9.))*step(0.,p.y);
+  c+=vec3(.15,1.,.8)*on*pow(y,18.)*.9+vec3(.05,.4,.4)*on*pow(y,4.)*.15*step(.5,fract(p.y*120.));
   return c; }
 vec3 natural(vec2 p,float t){
   vec3 sky=mix(vec3(.95,.5,.28),vec3(.22,.38,.78),smoothstep(0.,.45,p.y));
   vec2 sp=vec2(.25,.08); float sd=length(p-sp); sky+=vec3(2.,1.3,.8)*exp(-sd*12.)*.8+vec3(20.)*smoothstep(.05,.04,sd);
   vec3 c=sky;
+  // sun rays
+  float ang=atan(p.y-sp.y,p.x-sp.x); c+=vec3(1.,.75,.45)*pow(.5+.5*sin(ang*14.+t*.2),6.)*exp(-sd*2.5)*.25*step(0.,p.y);
+  // birds
+  for(int b=0;b<7;b++){ float fb=float(b); vec2 bp=vec2(fract(t*.025*(1.+fb*.13)+fb*.17)*2.6-1.3,.18+.12*hash11(fb)+.02*sin(t*.5+fb));
+    vec2 q=(p-bp)*vec2(1.,1.)*55.; float flap=sin(t*9.+fb*2.)*.35; float wing=abs(q.y-abs(q.x)*(.45+flap)); c=mix(c,vec3(.08,.06,.07),smoothstep(.22,.0,wing)*step(abs(q.x),1.)*.85); }
   for(int i=0;i<4;i++){ float fi=float(i); float h=-.02-fi*.08+fbm(vec2(p.x*(1.5+fi)+fi*7.,fi))*.18; if(p.y<h){ vec3 hc=mix(vec3(.55,.5,.3),vec3(.08,.18,.06),fi/3.); hc=mix(hc,sky*.6,.35/(1.+fi)); c=hc*(.85+.15*vnoise(p*80.)); } }
+  // swaying grass in the foreground + fireflies
+  float gl=-.42+.03*sin(p.x*40.+t*1.3)+.02*vnoise(vec2(p.x*90.,t*.6));
+  if(p.y<gl) c=vec3(.03,.07,.02)*(1.+.4*vnoise(p*200.));
+  for(int f=0;f<10;f++){ float ff=float(f); vec2 fp=vec2(hash11(ff)*2.4-1.2+.05*sin(t*.7+ff),-.38+.1*hash11(ff+4.)+.03*sin(t+ff*3.)); c+=vec3(1.,.85,.4)*exp(-length(p-fp)*260.)*(.5+.5*sin(t*3.+ff)); }
   return c; }
 void main(){ vec2 p=(vUv-.5)*vec2(uAsp,1.);
   float edge=(uSplit-.5)*uAsp+sin(p.y*14.+uT*2.)*.012;
@@ -102,7 +115,7 @@ void main(){ vec2 p=(vUv-.5)*vec2(uAsp,1.);
   c+=vec3(1.,.95,.85)*exp(-abs(p.x-edge)*220.)*.9;
   gl_FragColor=vec4(c,1.); }`, { uT: { value: 0 }, uAsp: { value: 1.78 }, uSplit: { value: .5 } });
   SCENES.push({
-    id: 'futures', title: 'Two futures', enterWith: 'wash', hud: { color: '#ffffff' },
+    id: 'futures', title: 'Two futures', enterWith: 'ink', hud: { color: '#ffffff' },
     beats: [{ dur: 2.5, hold: 6 }, { dur: 2.5, hold: 6 }],
     bed: { chord: [0, 4, 7, 11], oct: 4, cut: 1200, vol: .04, level: [.4, .5] },
     notes: [
@@ -121,7 +134,7 @@ void main(){ vec2 p=(vUv-.5)*vec2(uAsp,1.);
         render(slot, s) { mat.uniforms.uT.value = s.t; mat.uniforms.uAsp.value = V.W / V.H; mat.uniforms.uSplit.value = s.split; pass(mat, slot.hdr); },
         draw2d(g, s) {
           const W = V.W, H = V.H, k = Math.min(W / 1920, H / 1080) * (V.portrait ? 1.6 : 1), x = (V.portrait ? 60 : 120) * k;
-          text(g, 'Same technology.\nTwo futures.', { x: W / 2, y: H * .16, size: (V.portrait ? 54 : 84) * k, font: 'Unbounded', weight: 300, color: '#fff', align: 'center', track: -.035, anim: 'blur', by: 'word', glow: 'rgba(0,0,0,.5)' }, s.k(0, .2, 2, E.lin), s.on(1) ? clamp(s.at(1) / .5) : 0);
+          text(g, 'Same technology.\nTwo futures.', { x: W / 2, y: H * .16, size: (V.portrait ? 54 : 84) * k, font: 'Unbounded', weight: 300, color: '#fff', align: 'center', track: -.035, anim: 'wave', glow: 'rgba(0,0,0,.5)' }, s.k(0, .2, 2, E.lin), s.on(1) ? clamp(s.at(1) / .5) : 0);
           g.font = `500 ${20 * k}px "Geist Mono", monospace`; g.fillStyle = 'rgba(255,255,255,.85)';
           const lx = s.split * W; g.textAlign = 'right'; g.fillText('HANDED OVER  ←', lx - 24 * k, H - 70 * k); g.textAlign = 'left'; g.fillText('→  FLOURISHING', lx + 24 * k, H - 70 * k);
           if (s.on(1)) text(g, 'Which side we land on\nis decided by people.\nIn the next few years.', { x: W / 2, y: H * .16, size: (V.portrait ? 50 : 76) * k, font: 'Unbounded', weight: 300, color: '#fff', align: 'center', track: -.035, anim: 'rise', glow: 'rgba(0,0,0,.5)' }, s.k(1, .4, 2, E.lin));

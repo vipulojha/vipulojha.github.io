@@ -144,7 +144,7 @@ void main(){
         acc+=T*a*lc; T*=1.-a; if(T<.02) break; } }
     col=col*T+acc; }
   gl_FragColor=vec4(col,1.); }`, { tScene: { value: null }, tDepth: { value: null }, uInvVP: { value: new THREE.Matrix4() }, uCam: { value: new THREE.Vector3() }, uSun: { value: sun }, uTime: { value: 0 }, uAlt: { value: 0 } });
-      let u = 0; const lab = new THREE.Vector3();
+      let u = 0, prevY = 0, vel = 0; const lab = new THREE.Vector3(), bird = new THREE.Vector3();
       return {
         update(s) {
           u = s.p[0] + s.p[1] + s.p[2] + s.p[3];
@@ -160,7 +160,8 @@ void main(){
           const hp = tip <= meas[meas.length - 1].y ? meas[Math.max(0, n - 1)] : proj.find(p => p.y >= tip) || proj[proj.length - 1];
           head.position.copy(hp); head.scale.setScalar(1.3 + hp.y * .006);
           beads.forEach(b => { b.visible = b.position.y <= tip + .01; b.scale.setScalar(1 + b.position.distanceTo(cam.position) * .004); });
-          s.post = { bloom: .5, threshold: 1.1, exposure: .82, contrast: 1.1, vignette: .45, grain: .03, ca: .0016, halation: .35 };
+          vel += ((cam.position.y - prevY) / Math.max(s.dt, 1e-3) - vel) * .1; prevY = cam.position.y;
+          s.post = { streak: .35, flare: .25, bloom: .5, threshold: 1.1, exposure: .82, contrast: 1.1, vignette: .45, grain: .03, ca: .0016, halation: .35 };
           if (s.cross(1, .4) || s.cross(2, .4)) AU.hit('riser'); if (s.cross(2, 5) || s.cross(3, .2)) AU.hit('boom');
           if (s.cross(0, 1.2) || s.cross(0, 3.4) || s.cross(1, 3.2)) AU.hit('pop');
         },
@@ -174,13 +175,26 @@ void main(){
         draw2d(g, s) {
           const W = V.W, H = V.H, k = Math.min(W / 1920, H / 1080) * (V.portrait ? 1.6 : 1);
           // labels for models (projected)
-          g.font = `500 ${16 * k}px "Geist Mono", monospace`;
+          // birds circling the lower tower, drawn as flapping chevrons
+          g.strokeStyle = 'rgba(20,14,18,.85)'; g.lineCap = 'round';
+          for (let i = 0; i < 36; i++) {
+            const a = i * 2.4 + s.t * (.12 + (i % 5) * .02), r = 50 + (i * 37 % 90), hgt = 70 + (i * 53 % 170) + Math.sin(s.t * .7 + i) * 6;
+            bird.set(Math.cos(a) * r, hgt, Math.sin(a) * r * .6 + 20); const dist = bird.distanceTo(cam.position); bird.project(cam);
+            if (bird.z > 1 || Math.abs(bird.x) > 1.05 || Math.abs(bird.y) > 1.05) continue;
+            const sz = clamp(900 / dist, 1.5, 22) * k, fl = Math.sin(s.t * 9 + i * 1.7) * .55, bx = (bird.x * .5 + .5) * W, by = (1 - (bird.y * .5 + .5)) * H;
+            g.globalAlpha = clamp(1.4 - dist / 700); g.lineWidth = Math.max(1, sz * .14); g.beginPath(); g.moveTo(bx - sz, by - sz * fl); g.quadraticCurveTo(bx - sz * .4, by - sz * .25, bx, by); g.quadraticCurveTo(bx + sz * .4, by - sz * .25, bx + sz, by - sz * fl); g.stroke();
+          }
+          g.globalAlpha = 1;
+          // speed streaks when the camera climbs fast
+          const sp = clamp(Math.abs(vel) / 900);
+          if (sp > .05) { g.strokeStyle = 'rgba(255,255,255,.5)'; for (let i = 0; i < 70; i++) { const hx = (Math.sin(i * 91.7) * .5 + .5) * W, ph = (i * .137 + s.t * (1.5 + (i % 7) * .3) * Math.sign(vel)) % 1, hy = ((ph + 1) % 1) * H, len = sp * (60 + (i % 9) * 30) * k; g.globalAlpha = sp * .35 * ((i % 3) / 2 + .3); g.lineWidth = 1 + (i % 3) * .5; g.beginPath(); g.moveTo(hx, hy); g.lineTo(hx, hy + len * Math.sign(vel)); g.stroke(); } g.globalAlpha = 1; }
+          g.font = `500 ${19 * k}px "Geist Mono", monospace`;
           beads.forEach(b => {
             const d = b.userData; if (!d.lab || !b.visible) return;
             lab.copy(b.position).project(cam); if (lab.z > 1 || Math.abs(lab.x) > 1.1 || Math.abs(lab.y) > 1.1) return;
             const dist = b.position.distanceTo(cam.position), a = clamp(1.6 - dist / 260) * .95; if (a <= 0) return;
             const x = (lab.x * .5 + .5) * W, y = (1 - (lab.y * .5 + .5)) * H;
-            g.globalAlpha = a; g.fillStyle = '#fff'; g.fillRect(x + 10 * k, y - 1, 26 * k, 2); g.fillText(d.lab, x + 42 * k, y + 5 * k);
+            const tw = g.measureText(d.lab).width; g.globalAlpha = a; g.fillStyle = 'rgba(10,8,14,.55)'; g.beginPath(); g.roundRect(x + 34 * k, y - 16 * k, tw + 20 * k, 30 * k, 15 * k); g.fill(); g.fillStyle = '#fff'; g.fillRect(x + 8 * k, y - 1, 24 * k, 2); g.fillText(d.lab, x + 44 * k, y + 6 * k);
           });
           g.globalAlpha = 1;
           const sh = g.createLinearGradient(0, H * .45, 0, H); sh.addColorStop(0, 'rgba(0,0,0,0)'); sh.addColorStop(1, 'rgba(0,0,0,.42)'); g.fillStyle = sh; g.fillRect(0, H * .45, W, H * .55);

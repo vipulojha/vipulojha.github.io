@@ -63,12 +63,22 @@ import { SCENES, THREE, clamp, lerp, E, shader, pass, V, text, AU } from './00-c
           const area = { x: V.portrait ? 40 * k : W * .34, y: V.portrait ? H * .34 : H * .12, w: V.portrait ? W - 80 * k : W * .62, h: V.portrait ? H * .5 : H * .76 };
           const sc = Math.min(area.w / vw, area.h / vh);
           g.save(); g.translate(area.x + (area.w - vw * sc) / 2, area.y + (area.h - vh * sc) / 2); g.scale(sc, sc); g.translate(-vx, -vy);
-          for (let i = 0; i < 100; i++) { const x = gx(i), y = gy(i); if ((x - vx) * sc > area.w + 400 || (y - vy) * sc > area.h + 400) continue; cal(g, x, y, cw, ch, 2026 + i, clamp(s.Y - i), k); }
+          for (let i = 0; i < 100; i++) {
+            const x = gx(i), y = gy(i); if ((x - vx) * sc > area.w + 400 || (y - vy) * sc > area.h + 400) continue;
+            const ap = i === 0 ? s.k(0, 0, .9, E.lin) : i < 10 ? (s.on(1) ? clamp((s.at(1) - .25 - i * .09) / .55) : 0) : (s.on(2) ? clamp((s.at(2) - .5 - ((i % 10) + Math.floor(i / 10)) * .07) / .55) : 0);
+            if (ap <= 0) continue;
+            const pop = E.outBack(ap), done = clamp(s.Y - i) >= 1, flash = done ? Math.max(0, 1 - (s.Y - i - 1) * 3) : 0;
+            g.save(); g.globalAlpha = Math.min(1, ap * 2); g.translate(x + cw / 2, y + ch / 2); g.rotate((1 - pop) * (i % 2 ? .25 : -.25)); g.scale(pop, pop); g.translate(-cw / 2, -ch / 2);
+            g.shadowColor = 'rgba(60,30,10,.18)'; g.shadowBlur = 18; g.shadowOffsetY = 6; g.fillStyle = '#f7f2e8'; g.fillRect(-8, -8, cw + 16, ch + 16); g.shadowColor = 'transparent';
+            cal(g, 0, 0, cw, ch, 2026 + i, clamp(s.Y - i), k);
+            if (flash > 0) { g.globalAlpha = flash * .5; g.fillStyle = '#ffd27a'; g.fillRect(-8, -8, cw + 16, ch + 16); }
+            g.restore();
+          }
           g.restore();
           const x = (V.portrait ? 60 : 110) * k, big = (V.portrait ? 54 : 72) * k;
           const out = b => s.beat > b ? clamp(s.at(b + 1) / .5) : 0;
           const H1 = ['One year\nof science.', 'At 10×,\na decade\nevery year.', 'At 100×,\na century\nby 2036.'];
-          for (let b = 0; b < 3; b++) if (s.beat >= b && out(b) < 1) text(g, H1[b], { x, y: V.portrait ? H * .1 : H * .2, size: big, font: 'Unbounded', weight: 300, color: INK, track: -.04, lh: 1.05, anim: 'rise', maxW: V.portrait ? W - 2 * x : W * .3 }, s.k(b, .2, 1.3, E.lin), out(b));
+          for (let b = 0; b < 3; b++) if (s.beat >= b && out(b) < 1) text(g, H1[b], { x, y: V.portrait ? H * .1 : H * .2, size: big, font: 'Unbounded', weight: 300, color: INK, track: -.04, lh: 1.05, anim: 'mask', by: 'line', stagger: .4, maxW: V.portrait ? W - 2 * x : W * .3 }, s.k(b, .2, 1.3, E.lin), out(b));
           // counters
           const cy = V.portrait ? H * .26 : H * .74;
           g.font = `500 ${18 * k}px "Geist Mono", monospace`; g.fillStyle = 'rgba(43,38,32,.6)'; g.fillText('CALENDAR', x, cy); g.fillText('SCIENCE', x + 230 * k, cy);

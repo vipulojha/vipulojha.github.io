@@ -15,7 +15,7 @@ if (!document.createElement('canvas').getContext('webgl2')) {
   throw new Error('WebGL2 unavailable');
 }
 const R = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: false, powerPreference: 'high-performance', preserveDrawingBuffer: HEADLESS });
-R.autoClear = false;
+R.autoClear = false; R.shadowMap.enabled = true; R.shadowMap.type = THREE.PCFSoftShadowMap;
 R.outputColorSpace = THREE.LinearSRGBColorSpace;
 R.toneMapping = THREE.NoToneMapping;
 const HDR = (R.extensions.has('EXT_color_buffer_float') || R.extensions.has('EXT_color_buffer_half_float')) ? THREE.HalfFloatType : THREE.UnsignedByteType;
@@ -114,7 +114,7 @@ function makeRT(w, h, o = {}) {
 }
 
 // ---------- post pipeline (bloom pyramid + grade) ----------
-const POST_DEFAULT = { exposure: 1, bloom: .35, threshold: .9, ca: .0012, vignette: .28, grain: .028, sat: 1, contrast: 1, lift: [0, 0, 0], gain: [1, 1, 1], tonemap: 1, halation: .25, fade: [0, 0, 0, 0] };
+const POST_DEFAULT = { exposure: 1, bloom: .35, threshold: .9, ca: .0012, vignette: .28, grain: .028, sat: 1, contrast: 1, lift: [0, 0, 0], gain: [1, 1, 1], tonemap: 1, halation: .25, fade: [0, 0, 0, 0], streak: 0, flare: 0 };
 const mDown = shader(`uniform sampler2D tSrc; uniform vec2 uTexel; uniform float uThresh; uniform float uFirst;
 void main(){ vec2 o=uTexel;
  vec3 c = texture(tSrc,vUv).rgb*4.;
@@ -130,7 +130,7 @@ void main(){ vec2 o=uTexel*1.5; vec3 c=vec3(0.);
  c += texture(tSrc,vUv+vec2(-o.x,o.y)).rgb; c += texture(tSrc,vUv+vec2(0,o.y)).rgb*2.; c += texture(tSrc,vUv+vec2(o.x,o.y)).rgb;
  gl_FragColor=vec4(c/16. + texture(tAdd,vUv).rgb,1.); }`, { tSrc: { value: null }, tAdd: { value: null }, uTexel: { value: new THREE.Vector2() } });
 const mGrade = shader(`uniform sampler2D tHdr; uniform sampler2D tBloom; uniform float uTime;
-uniform float uExposure,uBloom,uCA,uVig,uGrain,uSat,uCon,uTone,uHal; uniform vec3 uLift,uGain; uniform vec4 uFade; uniform vec2 uRes;
+uniform float uExposure,uBloom,uCA,uVig,uGrain,uSat,uCon,uTone,uHal,uStreak,uFlare; uniform vec3 uLift,uGain; uniform vec4 uFade; uniform vec2 uRes;
 vec3 aces(vec3 x){ x*=.6; return clamp((x*(2.51*x+.03))/(x*(2.43*x+.59)+.14),0.,1.); }
 void main(){
  vec2 d=vUv-.5; float r2=dot(d,d);
@@ -139,6 +139,9 @@ void main(){
  else c=texture(tHdr,vUv).rgb;
  vec3 b=texture(tBloom,vUv).rgb;
  c += b*uBloom + b*vec3(1.,.35,.15)*uHal*uBloom*.6;
+ if(uStreak>0.){ vec3 st=vec3(0.); for(int i=-7;i<=7;i++){ float f=float(i); st+=texture(tBloom,vec2(vUv.x+f*.04,vUv.y)).rgb*exp(-abs(f)*.3); } c+=st*uStreak*vec3(.5,.68,1.)*.09; }
+ if(uFlare>0.){ vec2 g=1.-vUv; vec3 fl=vec3(0.); for(int i=0;i<4;i++){ float f=float(i); vec2 q=.5+(g-.5)*(.4+f*.45); fl+=texture(tBloom,q).rgb*vec3(.4+.2*f,.6,1.-.2*f)*exp(-length(q-.5)*2.); }
+   float hd=length((vUv-.5)*vec2(1.7,1.)); fl+=texture(tBloom,.5+normalize(vUv-.5+1e-4)*.45).rgb*smoothstep(.05,0.,abs(hd-.45))*vec3(1.,.6,.9); c+=fl*uFlare*.18; }
  c *= uExposure;
  if(uTone>.5){ c=aces(c); c=pow(c,vec3(1./2.2)); } else { c=toSrgb(clamp(c,0.,1.)); }
  c = (c-.5)*uCon+.5;
@@ -150,7 +153,7 @@ void main(){
  gl_FragColor=vec4(clamp(c,0.,1.),1.); }`, {
   tHdr: { value: null }, tBloom: { value: null }, uTime: { value: 0 }, uExposure: { value: 1 }, uBloom: { value: .3 }, uCA: { value: 0 }, uVig: { value: .3 },
   uGrain: { value: .03 }, uSat: { value: 1 }, uCon: { value: 1 }, uTone: { value: 1 }, uHal: { value: .2 }, uLift: { value: new THREE.Vector3() }, uGain: { value: new THREE.Vector3(1, 1, 1) },
-  uFade: { value: new THREE.Vector4() }, uRes: { value: new THREE.Vector2(1, 1) },
+  uFade: { value: new THREE.Vector4() }, uRes: { value: new THREE.Vector2(1, 1) }, uStreak: { value: 0 }, uFlare: { value: 0 },
 });
 const mOverlay = shader(`uniform sampler2D tOv; void main(){ vec4 o=texture(tOv,vUv); gl_FragColor=vec4(o.rgb,o.a); }`, { tOv: { value: null } }, { blend: true });
 const mCopy = shader(`uniform sampler2D tSrc; void main(){ gl_FragColor=vec4(texture(tSrc,vUv).rgb,1.); }`, { tSrc: { value: null } });
@@ -185,7 +188,7 @@ function grade(slot, post, time) {
   const u = mGrade.uniforms;
   u.tHdr.value = slot.hdr.texture; u.tBloom.value = b.texture; u.uTime.value = time;
   u.uExposure.value = P.exposure; u.uBloom.value = P.bloom; u.uCA.value = P.ca; u.uVig.value = P.vignette; u.uGrain.value = P.grain;
-  u.uSat.value = P.sat; u.uCon.value = P.contrast; u.uTone.value = P.tonemap; u.uHal.value = P.halation;
+  u.uStreak.value = P.streak; u.uFlare.value = P.flare; u.uSat.value = P.sat; u.uCon.value = P.contrast; u.uTone.value = P.tonemap; u.uHal.value = P.halation;
   u.uLift.value.fromArray(P.lift); u.uGain.value.fromArray(P.gain); u.uFade.value.fromArray(P.fade); u.uRes.value.set(slot.ldr.width, slot.ldr.height);
   pass(mGrade, slot.ldr);
 }
@@ -236,6 +239,8 @@ function layout(ctx, str, o) {
   if (layoutCache.size > 600) layoutCache.clear();
   layoutCache.set(key, L); return L;
 }
+const SCRAMBLE = 'ABCDEFGHJKLMNPQRSTUVWXYZ0123456789#%&*+=<>/\\';
+const TNOW = () => performance.now() / 1000;
 // draw(ctx, str, opts, p (in 0..1), q (out 0..1)) → bounds {x,y,w,h}
 function text(ctx, str, o, p = 1, q = 0) {
   const L = layout(ctx, str, o);
@@ -255,7 +260,7 @@ function text(ctx, str, o, p = 1, q = 0) {
     if (anim === 'type') { if (e0 < 1 || eq > 0 && eq >= 1) { if (caretX === null && e0 < 1) { caretX = o.x + g.x; caretY = y0 + g.y; } continue; } }
     const e = anim === 'type' ? 1 : ease(e0);
     if (e <= 0.001 && anim !== 'type') continue;
-    let a = ga, dx = 0, dy = 0, r = 0, sx = 1, sy = 1, blur = 0, clip = false, sk = 0;
+    let a = ga, dx = 0, dy = 0, r = 0, sx = 1, sy = 1, blur = 0, clip = false, sk = 0, ch = g.ch, col = o.color || '#fff', split = 0, glow = o.glow, clipW = 1;
     const gx = o.x + g.x, gy = y0 + g.y;
     switch (anim) {
       case 'rise': dy = (1 - e) * o.size * 1.05 - E.in3(eq) * o.size * 1.05; clip = true; break;
@@ -264,16 +269,28 @@ function text(ctx, str, o, p = 1, q = 0) {
       case 'track': { const c = (g.gi - L.n / 2); dx = c * (1 - e) * o.size * .45; a *= e * (1 - eq); blur = (1 - e) * 6; break; }
       case 'scatter': { const rr = prng(g.gi * 9973 + 7); const ang = rr() * 6.283, dist = (1 - e) * o.size * (3 + rr() * 5); dx = Math.cos(ang) * dist; dy = Math.sin(ang) * dist; r = (1 - e) * (rr() - .5) * 4; a *= Math.min(1, e * 2) * (1 - eq); break; }
       case 'drop': dy = -(1 - e) * o.size * 1.6 * (o.alt && g.gi % 2 ? -1 : 1); r = (1 - Math.min(1, e)) * .5 * ((g.gi % 2) ? 1 : -1); a *= Math.min(1, e0 * 3) * (1 - eq); break;
+      // --- extended styles ---
+      case 'decode': { if (e0 <= 0) { a = 0; break; } if (e0 < 1) { const k = Math.floor(TNOW() * 24 + g.gi * 7); ch = SCRAMBLE[(k * 31 + g.gi * 17) % SCRAMBLE.length]; col = o.accent || col; } a *= Math.min(1, e0 * 4) * (1 - eq); blur = eq * o.size * .15; break; }
+      case 'glitch': { a *= Math.min(1, e0 * 3) * (1 - eq); const step = Math.floor(TNOW() * 14), h = prng(step * 131 + g.gi * 7)(); const live = e0 < 1 || h > .93 || eq > 0; if (live) { dx = (h - .5) * o.size * .4 * (e0 < 1 ? 1 - e0 : .5); split = o.size * .06 * (1 - e * .6 + eq); } break; }
+      case 'flip': { const ang = (1 - e) * Math.PI * .5 + eq * Math.PI * .5; sy = Math.max(.001, Math.cos(ang)); sk = (1 - e) * .35; a *= Math.min(1, e0 * 2) * (1 - eq); dy = -(1 - sy) * o.size * .35; break; }
+      case 'wave': { a *= e * (1 - eq); dy = Math.sin(TNOW() * 2.6 + g.gi * .45) * o.size * .055 + (1 - e) * o.size * .6; r = Math.sin(TNOW() * 2 + g.gi * .7) * .03; break; }
+      case 'neon': { const fl = e0 >= 1 ? (Math.sin(TNOW() * 40 + g.gi) > .985 ? .35 : 1) : (prng(Math.floor(e0 * 18) + g.gi * 13)() > .5 ? 1 : .08); a *= Math.min(1, e0 * 6) * fl * (1 - eq); glow = o.glow || col; break; }
+      case 'stretch': { sy = lerp(3.2, 1, e) * (1 + eq * 2); sx = lerp(.15, 1, e); blur = (1 - e) * o.size * .12 + eq * o.size * .2; a *= Math.min(1, e0 * 2) * (1 - eq); break; }
+      case 'mask': { clipW = e; a *= 1 - eq; dx = (1 - e) * -o.size * .25; break; }
+      case 'zoom': { const z = lerp(2.6, 1, e) * (1 + eq * 1.5); sx = sy = z; blur = (1 - e) * o.size * .2 + eq * o.size * .2; a *= e * (1 - eq); break; }
+      case 'spring': { const sp = E.spring(clamp(e0)); dy = (1 - sp) * o.size * .9; sx = sy = .6 + .4 * sp; a *= Math.min(1, e0 * 4) * (1 - eq); break; }
     }
     if (o.fn) { const t = o.fn(g, e, eq, L); if (t) { dx += t.dx || 0; dy += t.dy || 0; r += t.r || 0; sx *= t.sx ?? 1; sy *= t.sy ?? 1; a *= t.a ?? 1; sk += t.sk || 0; } }
     if (a <= .002) continue;
     ctx.save();
     if (clip) { ctx.beginPath(); ctx.rect(gx - o.size, gy - o.size * 1.05, g.w + o.size * 2, o.size * 1.4); ctx.clip(); }
-    ctx.globalAlpha = a;
+    if (clipW < 1) { const lx = o.x + (o.align === 'center' ? -L.width / 2 : o.align === 'right' ? -L.width : 0); ctx.beginPath(); ctx.rect(lx - o.size, gy - o.size * 1.1, (L.width + o.size * 2) * clipW, o.size * 1.5); ctx.clip(); }
+    ctx.globalAlpha = a; ctx.fillStyle = col;
     if (blur > .4) ctx.filter = `blur(${blur.toFixed(1)}px)`;
     ctx.translate(gx + g.w / 2 + dx, gy + dy); if (r) ctx.rotate(r); if (sk) ctx.transform(1, 0, sk, 1, 0, 0); if (sx !== 1 || sy !== 1) ctx.scale(sx, sy);
-    if (o.glow) { ctx.shadowColor = o.glow; ctx.shadowBlur = o.size * .35; }
-    ctx.fillText(g.ch, -g.w / 2, 0);
+    if (split) { ctx.globalAlpha = a * .8; ctx.fillStyle = '#ff2a4d'; ctx.fillText(ch, -g.w / 2 - split, 0); ctx.fillStyle = '#21e8ff'; ctx.fillText(ch, -g.w / 2 + split, 0); ctx.globalAlpha = a; ctx.fillStyle = col; }
+    if (glow) { ctx.shadowColor = glow; ctx.shadowBlur = o.size * .35; }
+    ctx.fillText(ch, -g.w / 2, 0);
     ctx.restore();
     caretX = o.x + g.x + g.w; caretY = gy;
   }

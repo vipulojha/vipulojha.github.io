@@ -48,6 +48,15 @@ void main(){
   for(int i=0;i<2;i++){ vec3 L=i==0?uA:uB; float I=i==0?uIA:uIB; vec3 v=L-uCam; float tp=max(dot(v,rd),0.);
     if(tp<tHit){ float d=length(v-rd*tp); col+=vec3(1.,.66,.35)*I*(.05/(1.+d*d*6.)+.6*exp(-d*d*900./(1.+tp*tp*.02))); } }
   gl_FragColor=vec4(col,1.); }`, { uInvVP: { value: new THREE.Matrix4() }, uCam: { value: new THREE.Vector3() }, uA: { value: A }, uB: { value: B }, uT: { value: 0 }, uIA: { value: 0 }, uIB: { value: 0 }, uField: { value: 0 }, uDawn: { value: 0 }, uPix: { value: .001 } });
+  // god rays: radial blur of the bright sky toward the sun's screen position
+  const rays = shader(`uniform sampler2D tSrc; uniform vec2 uSun; uniform float uAmt,uAsp;
+void main(){ vec3 base=texture(tSrc,vUv).rgb; if(uAmt<=0.){ gl_FragColor=vec4(base,1.); return; }
+  vec2 d=(uSun-vUv)/48.; vec2 uv=vUv; float decay=1.; vec3 acc=vec3(0.); float j=hash12(gl_FragCoord.xy);
+  uv+=d*j;
+  for(int i=0;i<48;i++){ uv+=d; vec3 s=texture(tSrc,clamp(uv,0.,1.)).rgb; acc+=clamp(s-vec3(1.2),0.,1.5)*decay; decay*=.955; }
+  float fall=exp(-length((vUv-uSun)*vec2(uAsp,1.))*1.2);
+  gl_FragColor=vec4(base+acc*uAmt*.035*vec3(1.,.8,.6)*fall,1.); }`, { tSrc: { value: null }, uSun: { value: new THREE.Vector2(.5, .5) }, uAmt: { value: 0 }, uAsp: { value: 1.78 } });
+  const sunW = new THREE.Vector3();
   const cam = new THREE.PerspectiveCamera(50, 1.78, .1, 1e5);
   const pr = new THREE.Vector3();
   SCENES.push({
@@ -76,10 +85,17 @@ void main(){
           m.uInvVP.value.multiplyMatrices(cam.matrixWorld, cam.projectionMatrixInverse); m.uCam.value.copy(cam.position); m.uT.value = s.t;
           m.uIA.value = E.out2(clamp(s.at(0) / 1.6)) * 1.6; m.uIB.value = s.k(1, .3, 1.8) * 5.5; m.uField.value = s.k(2, 0, 3.2); m.uDawn.value = s.k(3, .8, 6.5, E.io2);
           m.uPix.value = 2 * Math.tan(cam.fov * Math.PI / 360) / (V.H * 1.4);
-          s.post = { bloom: lerp(.6, .3, m.uDawn.value), threshold: 1.1, exposure: lerp(1.15, .62, m.uDawn.value), vignette: lerp(.6, .35, m.uDawn.value), grain: .03, ca: .0015, halation: .6 };
+          s.post = { streak: .5 * (1 - m.uDawn.value) ** 3, flare: .3 * (1 - m.uDawn.value) ** 3, bloom: lerp(.6, .3, m.uDawn.value), threshold: 1.1, exposure: lerp(1.15, .62, m.uDawn.value), vignette: lerp(.6, .35, m.uDawn.value), grain: .03, ca: .0015, halation: .6 };
           if (s.cross(0, .2)) AU.hit('glass'); if (s.cross(1, .3)) AU.hit('shimmer'); if (s.cross(2, .2)) AU.hit('rise'); if (s.cross(3, .8)) { AU.hit('sub'); AU.hit('bell', 0, .4); } if (s.cross(3, 3)) AU.hit('shimmer');
         },
-        render(slot) { pass(mat, slot.hdr); },
+        render(slot, s) {
+          const dawn = mat.uniforms.uDawn.value;
+          if (dawn < .02) { pass(mat, slot.hdr); return; }
+          pass(mat, slot.aux);
+          sunW.set(.15, lerp(-.12, .09, dawn), 1).normalize().multiplyScalar(5e4).add(cam.position).project(cam);
+          rays.uniforms.tSrc.value = slot.aux.texture; rays.uniforms.uSun.value.set(sunW.x * .5 + .5, sunW.y * .5 + .5); rays.uniforms.uAmt.value = dawn * (sunW.z < 1 ? 1 : 0); rays.uniforms.uAsp.value = V.W / V.H;
+          pass(rays, slot.hdr);
+        },
         draw2d(g, s) {
           const W = V.W, H = V.H, k = Math.min(W / 1920, H / 1080) * (V.portrait ? 1.6 : 1), x = (V.portrait ? 60 : 120) * k;
           const label = (P, str, a) => { pr.copy(P).project(cam); if (pr.z > 1 || a <= 0) return; const px = (pr.x * .5 + .5) * W, py = (1 - (pr.y * .5 + .5)) * H; g.globalAlpha = a; g.fillStyle = '#fff'; g.font = `500 ${18 * k}px "Geist Mono", monospace`; g.fillRect(px + 14 * k, py - 30 * k, 1.5, 22 * k); g.fillText(str, px + 22 * k, py - 30 * k); g.globalAlpha = 1; };
@@ -89,7 +105,7 @@ void main(){
           text(g, 'Intelligence is how far\nyou can see.', { x, y: H * .18, size: (V.portrait ? 58 : 84) * k, font: 'Unbounded', weight: 300, color: '#fff', track: -.035, anim: 'blur', by: 'word', maxW: W - x * 2 }, s.k(0, .8, 2.6, E.lin), s.beat >= 2 ? clamp(s.at(2) / .6) : 0);
           if (s.beat === 1) text(g, 'A brighter lantern. Still night.', { x, y: H * .18 + 230 * k, size: 26 * k, font: 'Geist', color: 'rgba(255,255,255,.75)', anim: 'fade' }, s.k(1, 1, 2, E.lin), out(1));
           if (s.beat === 2 || (s.beat === 3 && out(2) < 1)) { text(g, 'Everyone alive.', { x, y: H * .2, size: (V.portrait ? 64 : 96) * k, font: 'Unbounded', weight: 300, color: '#fff', track: -.035, anim: 'rise' }, s.k(2, 1.6, 2.8, E.lin), out(2)); text(g, 'Eight billion lanterns. Still night.', { x, y: H * .2 + 70 * k, size: 26 * k, font: 'Geist', color: 'rgba(255,255,255,.75)', anim: 'fade' }, s.k(2, 2.4, 3.4, E.lin), out(2)); }
-          if (s.beat === 3) text(g, 'Superintelligence.', { x: W / 2, y: H * .86, size: (V.portrait ? 64 : 120) * k, font: 'Unbounded', weight: 300, color: '#fff', align: 'center', track: -.04, anim: 'rise', stagger: .7, glow: 'rgba(255,170,90,.6)' }, s.k(3, 2.8, 5.4, E.lin));
+          if (s.beat === 3) text(g, 'Superintelligence.', { x: W / 2, y: H * .86, size: (V.portrait ? 64 : 120) * k, font: 'Unbounded', weight: 300, color: '#fff', align: 'center', track: -.04, anim: 'stretch', stagger: .6, glow: 'rgba(255,170,90,.6)' }, s.k(3, 2.8, 5.4, E.lin));
         },
       };
     },

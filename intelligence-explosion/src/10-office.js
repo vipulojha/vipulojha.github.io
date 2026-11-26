@@ -34,11 +34,11 @@ function drawMetrCard(c) {
 
 {
   const sel = new SelBox();
-  const RED = 11.6, VD = 1.7, WIPE = .45, NV = 9;
-  const BG = ['#ffffff', '#f1f2f2', '#cfe0ee', '#ffd21f', '#8fe0b8', '#2347d9', '#ff9db8', '#c9a58c', '#b8c9e0'];
-  const HUDC = ['#111111', '#e51e16', '#0b2346', '#111111', '#0a3d2a', '#ffffff', '#3a0d1c', '#ffffff', '#1c2b45'];
-  const WIPES = [null, 'circle', 'diagonal', 'bars', 'pixels', 'columns', 'wavy', 'ring', 'gl'];
-  let chart, chrome, pts, ptsMat, cam, scene3, maskTex, blurTex, prevTitleN = -1, prevBul = 5, lastVar = -1;
+  const RED = 11.6, VD = 1.7, WIPE = .45, NV = 10, X3 = 8, CONF = 9, CARD = RED + 9 * VD + 2.7;
+  const BG = ['#ffffff', '#f1f2f2', '#cfe0ee', '#ffd21f', '#8fe0b8', '#2347d9', '#ff9db8', '#c9a58c', '#f27a3a', '#b8c9e0'];
+  const HUDC = ['#111111', '#e51e16', '#0b2346', '#111111', '#0a3d2a', '#ffffff', '#3a0d1c', '#ffffff', '#3a1206', '#1c2b45'];
+  const WIPES = [null, 'circle', 'diagonal', 'bars', 'pixels', 'columns', 'wavy', 'ring', 'gl', 'gl'];
+  let ext, initGL3D = null, chart, chrome, pts, ptsMat, cam, scene3, maskTex, blurTex, prevTitleN = -1, prevBul = 5, lastVar = -1;
   const u = () => Math.min(V.W / 1920, V.H / 1080) * (V.portrait ? 1.7 : 1);
 
   function wipePath(g, kind, e, i) {
@@ -122,8 +122,8 @@ function drawMetrCard(c) {
   }
 
   SCENES.push({
-    id: 'office', title: 'The Future of AI', enterWith: 'fade', hud: { font: 'arial', color: '#7f7f7f', alpha: 1 },
-    beats: [{ dur: .6, hold: 3, page: '1' }, { dur: 2.4, hold: 4, page: '2' }, { dur: 31, hold: 2, page: '2' }],
+    id: 'office', title: 'The Future of AI', enterWith: 'glitch', hud: { font: 'arial', color: '#7f7f7f', alpha: 1 },
+    beats: [{ dur: .6, hold: 3, page: '1' }, { dur: 2.4, hold: 4, page: '2' }, { dur: 33, hold: 2, page: '2' }],
     notes: [
       'Here is a presentation about the future of AI. It looks like every presentation about the future of AI.',
       'An agenda. Some bullets. A chart called "projected". Do not touch anything for the next half minute. Let the deck work.',
@@ -159,6 +159,35 @@ void main(){
   gl_FragColor=vec4(mix(bg,chromeC,inside),1.); }`,
         { tMask: { value: maskTex }, tBlur: { value: blurTex }, uAsp: { value: 1.78 }, uT: { value: 0 }, uFade: { value: 0 }, uBg: { value: new THREE.Color('#c9a58c') }, uBg2: { value: new THREE.Color('#b8c9e0') } });
       chrome.uniforms.uBg.value.convertSRGBToLinear(); chrome.uniforms.uBg2.value.convertSRGBToLinear();
+      // extruded, height-waved 3D word, ray-marched against the blurred mask (approximate SDF), soft shadows + AO
+      ext = shader(`uniform sampler2D tBlur; uniform float uAsp,uT,uReveal,uFade; uniform vec3 uBg2,uFloor,uRed;
+float word(vec3 p){ vec2 uv=vec2(p.x/2.3+.5,p.y/1.15+.5); float m=(uv.x>0.&&uv.x<1.&&uv.y>0.&&uv.y<1.)?texture(tBlur,uv).r:0.;
+  float d2=max((.5-m)*.045,sdBox(p.xy,vec2(1.15,.575))); float wave=sin(p.x*3.5+uT*2.2)*.06+sin(p.x*7.-uT*3.)*.02; return max(d2,abs(p.z-wave)-.11); }
+float map(vec3 p){ return min(word(p),p.y+.3); }
+vec3 nrm(vec3 p){ vec2 e=vec2(.004,0.); return normalize(vec3(map(p+e.xyy)-map(p-e.xyy),map(p+e.yxy)-map(p-e.yxy),map(p+e.yyx)-map(p-e.yyx))); }
+float shadow(vec3 ro,vec3 rd){ float r=1.,t=.02; for(int i=0;i<32;i++){ float h=map(ro+rd*t); r=min(r,10.*h/t); t+=clamp(h,.01,.15); if(r<.01||t>4.) break; } return clamp(r,0.,1.); }
+float ao(vec3 p,vec3 n){ float o=0.,w=1.; for(int i=1;i<=5;i++){ float h=.03*float(i); o+=(h-map(p+n*h))*w; w*=.6; } return clamp(1.-o*3.,0.,1.); }
+void main(){
+  vec2 q=(vUv-.5)*vec2(uAsp,1.);
+  float a=-.55+.45*sin(uT*.45); vec3 ro=vec3(sin(a)*3.1,.55+.2*sin(uT*.3),cos(a)*3.1); vec3 ta=vec3(0.,.02,0.);
+  vec3 f=normalize(ta-ro), r=normalize(cross(f,vec3(0,1,0))), u=cross(r,f);
+  vec3 rd=normalize(f*1.9*min(1.,uAsp/1.5)+r*q.x+u*q.y);
+  float t=0.; bool hit=false;
+  for(int i=0;i<140;i++){ float d=map(ro+rd*t); if(d<.0015){hit=true;break;} t+=d*.9; if(t>12.) break; }
+  vec3 bg=mix(uFloor*1.15,uFloor*.55,smoothstep(-.2,.6,q.y));
+  vec3 col=bg;
+  if(hit){ vec3 p=ro+rd*t, n=nrm(p); vec3 L=normalize(vec3(-.5,.8,.45));
+    float isF=step(p.y+.3,.003);
+    vec3 alb=mix(uRed,uFloor,isF);
+    float dif=max(dot(n,L),0.)*shadow(p+n*.005,L), oc=ao(p,n);
+    float spec=pow(max(dot(reflect(-L,n),-rd),0.),40.)*(1.-isF);
+    col=alb*(dif*vec3(1.25,1.,.85)*1.6+vec3(.35,.3,.4)*oc*.9)+spec*vec3(1.6,1.3,1.)+alb*.25*max(n.y,0.)*oc;
+    col=mix(col,bg,1.-exp(-t*t*.012));
+  }
+  col=mix(col,uBg2,uFade);
+  float rv=step(length(q),uReveal*1.3);
+  gl_FragColor=vec4(col,rv); }`, { tBlur: { value: blurTex }, uAsp: { value: 1.78 }, uT: { value: 0 }, uReveal: { value: 0 }, uFade: { value: 0 },
+        uBg2: { value: new THREE.Color('#b8c9e0').convertSRGBToLinear() }, uFloor: { value: new THREE.Color('#f27a3a').convertSRGBToLinear() }, uRed: { value: new THREE.Color('#c92a14').convertSRGBToLinear() } }, { blend: true });
       // confetti: ~7000 paper pieces fly in from depth to form the word
       const N = 7000, P = samplePoints(sharp, N, 3), rr = prng(11);
       const aT = new Float32Array(N * 3), aS = new Float32Array(N * 3), aSeed = new Float32Array(N);
@@ -183,12 +212,20 @@ void main(){ float k=clamp((uP-aSeed*.45)/.55,0.,1.); k=1.-pow(1.-k,3.);
       pts = new THREE.Points(geo, ptsMat); pts.frustumCulled = false;
       scene3 = new THREE.Scene(); scene3.add(pts); cam = new THREE.PerspectiveCamera(36, 1.78, .1, 100);
       return {
-        init() { drawMetrCard(chart); },
+        init() {
+          drawMetrCard(chart);
+          // fonts are loaded now: rebuild the word masks + confetti targets with the real typeface
+          const s2 = wordCanvas('Better.', '800 %spx Geist, Arial', 1024, 512), b2 = wordCanvas('Better.', '800 %spx Geist, Arial', 1024, 512, 14);
+          maskTex.image = s2; maskTex.needsUpdate = true; blurTex.image = b2; blurTex.needsUpdate = true;
+          const P2 = samplePoints(s2, N, 3), at = geo.attributes.position;
+          for (let i = 0; i < N; i++) at.setXY(i, P2[i][0] * 3.4, P2[i][1] * 1.7);
+          at.needsUpdate = true; initGL3D && initGL3D(s2, b2);
+        },
         enter() { prevTitleN = -1; prevBul = 5; lastVar = -1; sel.hide(); },
         update(s) {
           const T = s.at(2), red = s.on(2) && T >= RED;
           s.hideHud = !red; s.post = red && T >= RED + 7 * VD - WIPE ? { tonemap: 0, bloom: .7, threshold: .95, vignette: .15, grain: .02, ca: .001 } : { tonemap: 0, bloom: 0, vignette: 0, grain: .012, ca: 0 };
-          if (red) { const a = Math.min(NV - 1, Math.floor((T - RED) / VD)); s.page = String(3 + a); s.hudColor = T > 27.9 ? '#111' : HUDC[a]; }
+          if (red) { const a = Math.min(NV - 1, Math.floor((T - RED) / VD)); s.page = String(3 + a); s.hudColor = T > CARD ? '#111' : HUDC[a]; }
           else { s.page = null; s.hudColor = null; }
           // sounds for the self-editing sequence
           if (s.on(2)) {
@@ -196,19 +233,23 @@ void main(){ float k=clamp((uP-aSeed*.45)/.55,0.,1.); k=1.-pow(1.-k,3.);
             if (s.cross(2, 3.9)) AU.hit('riser');
             if (s.cross(2, 7.9)) AU.hit('pop');
             if (s.cross(2, RED)) AU.hit('snap');
-            for (let i = 1; i < NV; i++) if (s.cross(2, RED + i * VD)) AU.hit(i === 7 ? 'shimmer' : i === 8 ? 'paper' : 'whoosh');
-            if (s.cross(2, RED + 8 * VD + 1.9)) AU.hit('whoosh');
-            if (s.cross(2, 27.9)) AU.hit('flap');
-            if (s.cross(2, 29.4)) AU.hit('thud');
+            for (let i = 1; i < NV; i++) if (s.cross(2, RED + i * VD)) AU.hit(i === 7 ? 'shimmer' : i === 8 ? 'slam' : i === 9 ? 'paper' : 'whoosh');
+            if (s.cross(2, RED + CONF * VD + 1.9)) AU.hit('whoosh');
+            if (s.cross(2, CARD)) AU.hit('flap');
+            if (s.cross(2, CARD + 1.5)) AU.hit('thud');
           }
         },
         render(slot, s) {
           const T = s.at(2); if (!s.on(2) || T < RED + 7 * VD - WIPE) return;
           const asp = V.W / V.H; chrome.uniforms.uAsp.value = asp; chrome.uniforms.uT.value = s.t;
-          chrome.uniforms.uFade.value = sstep(RED + 8 * VD - WIPE, RED + 8 * VD + .3, T);
-          pass(chrome, slot.hdr);
-          if (T > RED + 8 * VD - WIPE) {
-            const lt = T - (RED + 8 * VD - WIPE);
+          chrome.uniforms.uFade.value = 0;
+          if (T < RED + X3 * VD + .1) pass(chrome, slot.hdr);
+          if (T > RED + X3 * VD - WIPE) {
+            const eu = ext.uniforms; eu.uAsp.value = asp; eu.uT.value = T - (RED + X3 * VD - WIPE); eu.uReveal.value = clamp((T - (RED + X3 * VD - WIPE)) / WIPE);
+            eu.uFade.value = sstep(RED + CONF * VD - WIPE, RED + CONF * VD + .3, T); pass(ext, slot.hdr);
+          }
+          if (T > RED + CONF * VD - WIPE) {
+            const lt = T - (RED + CONF * VD - WIPE);
             ptsMat.uniforms.uP.value = clamp(lt / 1.6); ptsMat.uniforms.uScatter.value = E.in3(clamp((lt - 2.3) / 1.6)); ptsMat.uniforms.uTime.value = s.t;
             ptsMat.uniforms.uSize.value = slot.hdr.height * .02;
             cam.aspect = asp; cam.fov = asp < 1 ? 70 : 36; cam.position.set(Math.sin(lt * .3) * .4, .05, lerp(5.6, 4.4, E.out3(clamp(lt / 2.5)))); cam.lookAt(0, 0, 0); cam.updateProjectionMatrix();
@@ -293,7 +334,7 @@ void main(){ float k=clamp((uP-aSeed*.45)/.55,0.,1.); k=1.-pow(1.-k,3.);
               else box = variant(g, a, tt);
             } else box = variant(g, a, tt);
             if (a !== lastVar) { lastVar = a; if (a > 0) AU.hit('select', 0, .05); }
-            const cardT = T - 27.9;
+            const cardT = T - CARD;
             if (cardT < 0 && box) sel.set(box); else sel.hide();
             // the real chart flies in as a card, flips, then fills the frame
             if (cardT > 0) {

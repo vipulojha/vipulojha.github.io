@@ -34,7 +34,7 @@ import { SCENES, THREE, R, clamp, lerp, E, rig, prng, shader, V, text, AU } from
     return cx;
   }
   SCENES.push({
-    id: 'swarm', title: 'A country of them', enterWith: 'portal', hud: { color: CREAM },
+    id: 'swarm', title: 'A country of them', enterWith: 'zoomblur', hud: { color: CREAM },
     beats: [{ dur: 3, hold: 3, page: '1' }, { dur: 4, hold: 3, page: '30,000' }, { dur: 11, hold: 2, page: '10,000' }, { dur: 6, hold: 6, page: '1,000,000' }],
     bed: { chord: [0, 4, 7, 9, 11], oct: 3, cut: 900, vol: .04, level: [.25, .45, .55, .7] },
     notes: [
@@ -55,7 +55,7 @@ import { SCENES, THREE, R, clamp, lerp, E, rig, prng, shader, V, text, AU } from
         { uR: { value: 1 }, uT: { value: 0 }, uPx: { value: 1 } },
         { blend: 'add', vert: `attribute float aSeed; uniform float uR,uT,uPx; varying float vA; varying float vH; varying vec2 vUv;
 void main(){ float d=length(position.xz); float vis=smoothstep(uR+1.5,uR-1.5,d); if(d<.01) vis=1.;
-  float work=pow(.5+.5*sin(uT*(1.+aSeed*3.)+aSeed*60.),12.); vH=work;
+  float work=pow(.5+.5*sin(uT*(1.+aSeed*3.)+aSeed*60.),12.); float front=exp(-pow((d-uR)/2.5,2.))*step(2.,uR); vH=work+front*2.5;
   vec3 p=position+vec3(0.,.12+.04*sin(uT*2.+aSeed*20.),0.);
   vec4 mv=modelViewMatrix*vec4(p,1.); gl_Position=projectionMatrix*mv;
   float hero=d<.01?1.6:1.; gl_PointSize=clamp(uPx*.09*hero/-mv.z,1.6,46.)*(vis>0.?1.:0.);
@@ -90,7 +90,7 @@ void main(){ vec3 s=position; float t=uT*(.2+s.x*.3)+s.y*30.;
       ground = new THREE.Mesh(new THREE.PlaneGeometry(6000, 6000), shader(`varying vec3 vW; uniform float uR;
 void main(){ float d=length(vW.xz); vec3 c=vec3(.01,.011,.016)*(.7+.3*vnoise(vW.xz*.3));
   c+=vec3(1.,.6,.3)*.22/(1.+d*d*2.5);
-  c+=vec3(1.,.55,.28)*.028*smoothstep(uR+4.,uR*.6,d);
+  c+=vec3(1.,.55,.28)*.028*smoothstep(uR+4.,uR*.6,d); c+=vec3(1.,.7,.4)*.12*exp(-pow((d-uR)/4.,2.))*step(2.,uR);
   float f=1.-exp(-length(vW-cameraPosition)*.0016); c=mix(c,vec3(.015,.016,.03),f);
   gl_FragColor=vec4(c,1.); }`, { uR: { value: 1 } }, { depth: true, vert: `varying vec3 vW; varying vec2 vUv; void main(){ vec4 w=modelMatrix*vec4(position,1.); vW=w.xyz; vUv=uv; gl_Position=projectionMatrix*viewMatrix*w; }` }));
       ground.rotation.x = -Math.PI / 2; scene3.add(ground, arcs, agents, flies);
@@ -109,7 +109,7 @@ void main(){ float d=length(vW.xz); vec3 c=vec3(.01,.011,.016)*(.7+.3*vnoise(vW.
           arcs.material.uniforms.uR.value = rad; arcs.material.uniforms.uT.value = s.t; arcs.material.uniforms.uOn.value = clamp(rad / 20);
           flies.material.uniforms.uT.value = s.t; flies.material.uniforms.uPx.value = V.H * 1.6;
           ground.material.uniforms.uR.value = rad;
-          s.post = { bloom: .75, threshold: .6, exposure: 1.1, vignette: .55, grain: .028, ca: .0015, halation: .5, lift: [.0, .006, .02] };
+          s.post = { streak: .45, bloom: .75, threshold: .6, exposure: 1.1, vignette: .55, grain: .028, ca: .0015, halation: .5, lift: [.0, .006, .02] };
           if (s.cross(1, 0) || s.cross(3, 0)) AU.hit('riser'); if (s.cross(2, .1)) AU.hit('whoosh'); if (s.cross(2, 5.4)) AU.hit('bell'); if (s.cross(0, .4)) AU.hit('glass');
         },
         render(slot) { R.setRenderTarget(slot.hdr); R.setClearColor(new THREE.Color(.008, .009, .016), 1); R.clear(); R.render(scene3, cam); },

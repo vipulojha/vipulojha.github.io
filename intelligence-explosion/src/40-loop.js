@@ -5,7 +5,7 @@
 import { SCENES, THREE, clamp, E, shader, pass, V, text, AU } from './00-core.js';
 
 {
-  const mat = shader(`uniform float uT,uAsp,uMix,uFrom,uTo,uSpeed,uZoom; uniform vec2 uOff;
+  const mat = shader(`uniform float uT,uAsp,uMix,uFrom,uTo,uSpeed,uZoom,uResY; uniform vec2 uOff;
 #define BLK vec3(.07,.065,.06)
 #define PAP vec3(.95,.92,.86)
 #define YEL vec3(.97,.78,.05)
@@ -61,7 +61,7 @@ vec3 posterC(vec2 p,float t){
   return c; }
 vec3 poster(float i,vec2 p,float t){ return i<.5?posterA(p,t):i<1.5?posterB(p,t):posterC(p,t); }
 void main(){
-  vec2 p=(vUv-.5)*vec2(uAsp,1.); px=1.5/600.;
+  vec2 p=(vUv-.5)*vec2(uAsp,1.); px=1.2*uZoom/uResY;
   vec2 q=(p-uOff)*uZoom;
   vec3 A=poster(uFrom,q,uT*uSpeed), B=poster(uTo,q,uT*uSpeed);
   float m=1.-smoothstep(uMix*1.3-.02,uMix*1.3,length(p-uOff)*.9);
@@ -69,7 +69,7 @@ void main(){
   // print texture: misregistered ink + paper fibres
   c*=.94+.06*vnoise(vUv*vec2(uAsp,1.)*900.);
   c=mix(c,c*vec3(.98,.96,.92),.5);
-  gl_FragColor=vec4(toLin(c),1.); }`, { uT: { value: 0 }, uAsp: { value: 1.78 }, uMix: { value: 1 }, uFrom: { value: 0 }, uTo: { value: 0 }, uSpeed: { value: 1 }, uZoom: { value: 1.1 }, uOff: { value: new THREE.Vector2() } });
+  gl_FragColor=vec4(toLin(c),1.); }`, { uT: { value: 0 }, uAsp: { value: 1.78 }, uMix: { value: 1 }, uFrom: { value: 0 }, uTo: { value: 0 }, uSpeed: { value: 1 }, uZoom: { value: 1.1 }, uResY: { value: 1080 }, uOff: { value: new THREE.Vector2() } });
 
   const INK = ['#121110', '#f2ece0', '#f2ece0'];
   SCENES.push({
@@ -97,12 +97,12 @@ void main(){
           const b = s.beat; u.uTo.value = b; u.uFrom.value = Math.max(0, b - 1); u.uMix.value = b === 0 ? 1 : E.io3(s.p[b]);
           if (s.dir < 0) { u.uFrom.value = b; u.uTo.value = b; u.uMix.value = 1; }
           u.uOff.value.set(V.portrait ? 0 : V.W / V.H * (b === 2 ? .26 : .2), V.portrait ? -.18 : -.02); u.uZoom.value = b === 2 ? 1.5 : 1.1;
-          pass(mat, slot.hdr);
+          u.uResY.value = slot.hdr.height; pass(mat, slot.hdr);
         },
         draw2d(g, s) {
           const W = V.W, H = V.H, k = Math.min(W / 1920, H / 1080) * (V.portrait ? 1.6 : 1), x = (V.portrait ? 60 : 110) * k, y = V.portrait ? H * .1 : H * .16;
           const c = INK[s.beat], big = (V.portrait ? 58 : 84) * k;
-          if (s.beat === 0) text(g, 'AI is now helping\nbuild AI.', { x, y, size: big, font: 'Unbounded', weight: 800, color: c, track: -.04, lh: 1.02, anim: 'rise', maxW: W * .5 }, s.k(0, .2, 1.4, E.lin));
+          if (s.beat === 0) text(g, 'AI is now helping\nbuild AI.', { x, y, size: big, font: 'Unbounded', weight: 800, color: c, track: -.04, lh: 1.02, anim: 'spring', maxW: W * .5 }, s.k(0, .2, 1.4, E.lin));
           if (s.beat === 1) {
             text(g, '26%', { x, y: y + 150 * k, size: big * 2.6, font: 'Unbounded', weight: 800, color: '#f7c60d', track: -.06, anim: 'track' }, s.k(1, .3, 1.4, E.lin));
             text(g, 'of Anthropic’s AI research work was led by Claude in August 2026.', { x, y: y + 240 * k, size: 34 * k, font: 'Geist', weight: 500, color: c, maxW: V.portrait ? W - x * 2 : W * .36, anim: 'blur' }, s.k(1, .9, 2.2, E.lin));

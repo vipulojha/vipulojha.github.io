@@ -21,9 +21,9 @@ import { SCENES, THREE, R, clamp, lerp, E, shader, pass, V, text, AU } from './0
   const fmtM = m => m < 1 ? `${Math.round(m * 100)} cm` : m < 1000 ? `${m < 10 ? m.toFixed(1) : Math.round(m)} m` : `${(m / 1000).toFixed(1)} km`;
   const MILES = [[17, 'Domino 18 is as tall as a 15-storey building.'], [24, 'Domino 25 is taller than the Burj Khalifa.'], [30, 'Domino 31 is taller than Mount Everest.']];
 
-  let scene3, cam, mesh, ground, dust, dustMat, lastHit = -1, impactT = -1;
+  let catcher, scene3, cam, mesh, ground, dust, dustMat, chips, chipMat, sunRef, lastHit = -1, impactT = -1;
   SCENES.push({
-    id: 'dominoes', title: 'Each one 1.5×', enterWith: 'line', hud: { color: '#f3e9dc' },
+    id: 'dominoes', title: 'Each one 1.5×', enterWith: 'shatter', hud: { color: '#f3e9dc' },
     beats: [{ dur: 2, hold: 3 }, { dur: END + 2, hold: 2 }, { dur: 2, hold: 4 }],
     bed: { chord: [0, 3, 7], oct: 2, cut: 500, vol: .06, level: [.25, .5, .35] },
     notes: [
@@ -43,7 +43,10 @@ import { SCENES, THREE, R, clamp, lerp, E, shader, pass, V, text, AU } from './0
       const geo = new THREE.BoxGeometry(1, 1, 1); geo.translate(.5, .5, 0); // pivot at back-bottom edge, extends +x (thickness), +y (height)
       mesh = new THREE.InstancedMesh(geo, [face, face, side, side, side, side], N); mesh.frustumCulled = false; scene3.add(mesh);
       scene3.add(new THREE.HemisphereLight(0xffe9d2, 0x2a1d14, .9));
-      const sunL = new THREE.DirectionalLight(0xffd7a8, 3.2); sunL.position.set(-.4, .7, .6); scene3.add(sunL);
+      const sunL = new THREE.DirectionalLight(0xffd7a8, 3.2); sunL.position.set(-.4, .7, .6); scene3.add(sunL, sunL.target);
+      sunL.castShadow = true; sunL.shadow.mapSize.set(2048, 2048); sunL.shadow.bias = -.0004; sunL.shadow.normalBias = .02; mesh.castShadow = true;
+      catcher = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.ShadowMaterial({ opacity: .6, depthWrite: false })); catcher.rotation.x = -Math.PI / 2; catcher.receiveShadow = true; catcher.renderOrder = 2; scene3.add(catcher);
+      const SUN_DIR = new THREE.Vector3(-.55, .75, .5).normalize(); sunRef = sunL;
       const rim = new THREE.DirectionalLight(0x9ab0ff, .45); rim.position.set(.6, .3, -.8); scene3.add(rim);
       // ground with a log-scale grid that stays readable at every zoom level
       ground = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), shader(`varying vec3 vW; uniform float uScale;
@@ -54,7 +57,7 @@ void main(){ float lg=log(uScale)/log(10.); float f=fract(lg); float s0=pow(10.,
   c+=vec3(.35,.28,.22)*g*.35;
   float d=length(vW.xz-vec2(0.))/uScale; c*=1.;
   gl_FragColor=vec4(c,1.); }`, { uScale: { value: 1 } }, { depth: true, vert: `varying vec3 vW; varying vec2 vUv; void main(){ vec4 w=modelMatrix*vec4(position,1.); vW=w.xyz; vUv=uv; gl_Position=projectionMatrix*viewMatrix*w; }` }));
-      ground.rotation.x = -Math.PI / 2; ground.scale.setScalar(4e6); ground.position.x = 1e6; scene3.add(ground);
+      ground.rotation.x = -Math.PI / 2; scene3.add(ground);
       // dust burst for the final impact
       const DN = 5000, dp = new Float32Array(DN * 3), dv = new Float32Array(DN * 4);
       for (let i = 0; i < DN; i++) { const a = Math.random() * 6.283, sp = .2 + Math.random(); dv.set([Math.cos(a) * sp, .15 + Math.random() * .6, Math.sin(a) * sp, Math.random()], i * 4); }
@@ -67,6 +70,23 @@ void main(){ float t=max(uT,0.); vec3 v=aV.xyz; float k=1.-exp(-t*1.4);
   vec4 mv=modelViewMatrix*vec4(p,1.); gl_Position=projectionMatrix*mv; gl_PointSize=uPx*uS*(.02+aV.w*.05)*(1.+t*.4)/-mv.z;
   vA=step(0.,uT)*exp(-t*.35)*smoothstep(0.,.2,t); vUv=vec2(0.); }` });
       dust = new THREE.Points(dg, dustMat); dust.frustumCulled = false; scene3.add(dust);
+      // chips + puffs at every impact (per domino, scaled to its size)
+      const PER = 90, CN = PER * N, cv = new Float32Array(CN * 4), ck = new Float32Array(CN);
+      for (let i = 0; i < CN; i++) { const a = Math.random() * 6.283; cv.set([Math.cos(a) * (.2 + Math.random()), .3 + Math.random() * 1.2, Math.sin(a) * (.2 + Math.random()), Math.random()], i * 4); ck[i] = Math.floor(i / PER); }
+      const cg = new THREE.BufferGeometry(); cg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(CN * 3), 3)); cg.setAttribute('aV', new THREE.BufferAttribute(cv, 4)); cg.setAttribute('aK', new THREE.BufferAttribute(ck, 1));
+      const impT = new Float32Array(N), impX = new Float32Array(N);
+      for (let k = 0; k < N; k++) { impT[k] = T0[k] + dur(k); impX[k] = k < N - 1 ? xs[k + 1] : xs[k] + h(k) * .6; }
+      chipMat = shader(`varying float vA; varying float vS; void main(){ vec2 c=gl_PointCoord-.5; if(vS>.5){ if(abs(c.x)>.3||abs(c.y)>.18) discard; gl_FragColor=vec4(vec3(.85,.8,.72)*.8,vA); } else { float d=length(c); if(d>.5) discard; gl_FragColor=vec4(vec3(.8,.72,.62),(1.-d*2.)*(1.-d*2.)*vA*.07); } }`,
+        { uTf: { value: 0 }, uImp: { value: impT }, uX: { value: impX }, uPx: { value: 1 } },
+        { blend: true, vert: `attribute vec4 aV; attribute float aK; uniform float uTf,uPx; uniform float uImp[${N}]; uniform float uX[${N}]; varying float vA; varying float vS; varying vec2 vUv;
+void main(){ int k=int(aK+.5); float t=uTf-uImp[k]; float h=pow(1.5,aK);
+  float chip=step(.55,aV.w); vS=chip;
+  vec3 o=vec3(uX[k],h*.78,0.);
+  vec3 p=o+vec3(aV.x*t*.8,aV.y*t*1.4-t*t*2.2*chip,aV.z*t*.8)*h*.35*mix(1.6,1.,chip);
+  p.y=max(p.y,h*.01);
+  vec4 mv=modelViewMatrix*vec4(p,1.); gl_Position=projectionMatrix*mv; gl_PointSize=clamp(uPx*h*mix(.06,.03,chip)*(1.+t*.6*(1.-chip))/-mv.z,0.,60.);
+  vA=step(0.,t)*clamp(1.-t/mix(2.4,1.4,chip),0.,1.)*step(t,3.); vUv=vec2(0.); }` });
+      chips = new THREE.Points(cg, chipMat); chips.frustumCulled = false; scene3.add(chips);
       const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), Z = new THREE.Vector3(0, 0, 1), P = new THREE.Vector3(), S = new THREE.Vector3();
       let tf = 0, ci = 0;
       return {
@@ -93,7 +113,10 @@ void main(){ float t=max(uT,0.); vec3 v=aV.xyz; float k=1.-exp(-t*1.4);
           const shake = impactT > 0 ? Math.exp(-(tf - impactT) * 1.5) * hc * .03 : 0;
           cam.position.set(xc + Math.sin(orbit) * dist + Math.sin(s.t * 40) * shake, hc * (.55 + s.mouse.y * .2 + fin * .5) + Math.cos(s.t * 33) * shake, Math.cos(orbit) * dist);
           cam.lookAt(xc, hc * .42, 0); cam.near = hc * .02; cam.far = hc * 4000; cam.aspect = V.W / V.H; cam.fov = V.portrait ? 62 : 40; cam.updateProjectionMatrix();
-          ground.material.uniforms.uScale.value = hc;
+          ground.material.uniforms.uScale.value = hc; ground.scale.setScalar(hc * 3000); ground.position.set(xc, 0, 0); catcher.scale.setScalar(hc * 3000); catcher.position.set(xc, hc * .0015, 0);
+          chipMat.uniforms.uTf.value = tf; chipMat.uniforms.uPx.value = V.H;
+          sunRef.target.position.set(xc, 0, 0); sunRef.position.set(xc + SUN_DIR.x * hc * 8, SUN_DIR.y * hc * 8, SUN_DIR.z * hc * 8);
+          const sc2 = sunRef.shadow.camera; sc2.left = sc2.bottom = -hc * 3.2; sc2.right = sc2.top = hc * 3.2; sc2.near = hc * .5; sc2.far = hc * 20; sc2.updateProjectionMatrix();
           dustMat.uniforms.uT.value = impactT > 0 ? tf - impactT : -1; dustMat.uniforms.uO.value.set(xs[N - 1] + h(N - 1) * .6, 0, 0); dustMat.uniforms.uS.value = h(N - 1); dustMat.uniforms.uPx.value = V.H;
           s.post = { bloom: .25, threshold: 1, exposure: 1.05, vignette: .5, grain: .035, ca: .0012, contrast: 1.06, lift: [.01, .012, .02] };
           s.ci = ci;
@@ -114,7 +137,7 @@ void main(){ float t=max(uT,0.); vec3 v=aV.xyz; float k=1.-exp(-t*1.4);
             g.globalAlpha = 1;
             for (const [m, l] of MILES) {
               const t0 = T0[m] + dur(m) * .3, a = s.at(1) - t0; if (a < 0 || a > dur(m) + 2.2) continue;
-              text(g, l, { x: W / 2, y: H * .16, size: (V.portrait ? 40 : 56) * k, font: 'Unbounded', weight: 300, color: '#fff', align: 'center', track: -.03, anim: 'blur', maxW: W * .86 }, clamp(a / 1.1), clamp((a - dur(m) - 1.4) / .8));
+              text(g, l, { x: W / 2, y: H * .16, size: (V.portrait ? 40 : 56) * k, font: 'Unbounded', weight: 300, color: '#fff', align: 'center', track: -.03, anim: 'flip', maxW: W * .86 }, clamp(a / 1.1), clamp((a - dur(m) - 1.4) / .8));
             }
           }
           if (s.on(2)) {

@@ -224,6 +224,10 @@ addEventListener('pointerup', e => {
 });
 canvas2.addEventListener('click', e => { if (swiped) return; if (e.button === 0 && !scenes[cur].s.captureClicks) next(); });
 canvas2.addEventListener('contextmenu', e => { e.preventDefault(); back(); });
+const curEl = $('cur'); let cx = 0, cy = 0, tcx = 0, tcy = 0;
+(function curLoop() { cx += (tcx - cx) * .22; cy += (tcy - cy) * .22; curEl.style.transform = `translate(${cx}px,${cy}px)`; requestAnimationFrame(curLoop); })();
+addEventListener('pointerdown', () => curEl.classList.add('dn')); addEventListener('pointerup', () => curEl.classList.remove('dn'));
+addEventListener('pointermove', e => { tcx = e.clientX; tcy = e.clientY; });
 addEventListener('pointermove', e => { mouse.tx = e.clientX / CW * 2 - 1; mouse.ty = -(e.clientY / CH * 2 - 1); mouse.px = e.clientX / CW * V.W; mouse.py = e.clientY / CH * V.H; wake(); }, { passive: true });
 addEventListener('hashchange', () => routeHash());
 function routeHash() {
