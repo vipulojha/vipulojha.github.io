@@ -111,7 +111,7 @@ void main(){ vec2 p=(vUv-.5)*vec2(uAsp,1.); float r=length(p);
           const W = V.W, H = V.H, k = Math.min(W / 1920, H / 1080) * (V.portrait ? 1.6 : 1);
           if (!s.on(1)) {
             text(g, 'A PRESENTATION ON THE NEXT TEN YEARS', { x: W / 2, y: H * .84, size: 18 * k, font: 'Geist Mono', weight: 500, color: 'rgba(255,255,255,.75)', align: 'center', track: .35, anim: 'decode', accent: '#5ef2ff', stagger: .8 }, s.k(0, 1, 3.6, E.lin));
-            text(g, 'press → to begin', { x: W / 2, y: H * .9, size: 14 * k, font: 'Geist Mono', color: 'rgba(255,255,255,.4)', align: 'center', track: .25, anim: 'neon' }, s.k(0, 3.2, 4, E.lin));
+            text(g, 'sound on  ·  press → or tap to begin', { x: W / 2, y: H * .9, size: 14 * k, font: 'Geist Mono', color: 'rgba(255,255,255,.4)', align: 'center', track: .25, anim: 'neon' }, s.k(0, 3.2, 4, E.lin));
           }
           if (s.on(1) && !s.on(2)) {
             text(g, 'What happens when minds start building better minds.', { x: W / 2, y: H * (V.portrait ? .76 : .86), size: (V.portrait ? 30 : 30) * k, font: 'Newsreader', italic: true, color: '#f2ecff', align: 'center', anim: 'blur', by: 'word', maxW: W * .86 }, s.k(1, 6.8, 9, E.lin));

@@ -6,7 +6,7 @@
 import { SCENES, THREE, R, clamp, lerp, E, rig, prng, shader, V, text, AU } from './00-core.js';
 
 {
-  const G = 640, SP = 1.0; // grid of agents
+  const G = Math.min(innerWidth, innerHeight) < 700 ? 400 : 640, SP = 1.0; // grid of agents (lighter on phones)
   const CREAM = '#fbf6ec';
   const KEYS = [
     { u: 0, pos: [1.6, .7, 2.6], look: [0, .25, 0], fov: 38 },
@@ -17,7 +17,7 @@ import { SCENES, THREE, R, clamp, lerp, E, rig, prng, shader, V, text, AU } from
     { u: 3, pos: [-60, 140, 260], look: [0, 0, -20], fov: 50 },
     { u: 4, pos: [0, 520, 760], look: [0, 0, -160], fov: 54 },
   ];
-  const RADII = [.01, Math.sqrt(30000 / Math.PI), Math.sqrt(30000 / Math.PI), 300];
+  const RADII = [.01, Math.sqrt(30000 / Math.PI), Math.sqrt(30000 / Math.PI), G / 2 - 18];
   let scene3, cam, agents, arcs, flies, ground;
   function odometer(g, x, y, v, size, color) {
     const digits = Math.max(1, Math.floor(Math.log10(Math.max(1, v))) + 1), str = [];

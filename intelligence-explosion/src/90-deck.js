@@ -37,6 +37,10 @@ function resize() {
 }
 const canvas2 = R.domElement;
 
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+// graphics context loss (GPU reset, tab backgrounded on some phones): tell the viewer and reload cleanly
+canvas2.addEventListener('webglcontextlost', e => { e.preventDefault(); const d = document.createElement('div'); d.id = 'lost'; d.textContent = 'Graphics were reset. Reloading…'; d.style.cssText = 'position:fixed;inset:0;display:grid;place-items:center;background:#030308;color:#cfd3ff;font:500 13px "Geist Mono",monospace;letter-spacing:.3em;z-index:40'; document.body.appendChild(d); }, false);
+canvas2.addEventListener('webglcontextrestored', () => location.reload(), false);
 const mAccum = shader(`uniform sampler2D tCur, tPrev; uniform float uK; void main(){ gl_FragColor=vec4(mix(texture(tCur,vUv).rgb,texture(tPrev,vUv).rgb,uK),1.); }`, { tCur: { value: null }, tPrev: { value: null }, uK: { value: 0 } });
 // ---------- present pass (dither + black) ----------
 const mPresent = shader(`uniform sampler2D tSrc; uniform float uBlack, uTime;
@@ -76,6 +80,12 @@ function drawHUD(sc, og) {
   const str = s.page ?? beat.page ?? String(sc.s.idx + 1);
   let st = hudState.get(sc); if (!st || st.str !== str) { st = { str, t: tNow }; hudState.set(sc, st); }
   if (h.hidden || s.hideHud) return;
+  // deck progress: one segment per slide, the current one filling beat by beat
+  { const n = scenes.length, kk = Math.min(V.W / 1920, V.H / 1080) * (V.portrait ? 1.6 : 1), tw = Math.min(V.W * .3, 300 * kk), gap = 4 * kk, sw = (tw - gap * (n - 1)) / n, y = V.H - 40 * kk, x0 = 56 * kk;
+    const col = s.hudColor || h.color || '#fff';
+    og.save(); og.globalAlpha = .55;
+    for (let i = 0; i < n; i++) { const f = i < sc.s.idx ? 1 : i > sc.s.idx ? 0 : clamp((s.beat + s.p[s.beat]) / s.beats.length); og.fillStyle = 'rgba(255,255,255,.18)'; og.fillRect(x0 + i * (sw + gap), y, sw, 2 * kk); og.fillStyle = col; og.fillRect(x0 + i * (sw + gap), y, sw * f, 2 * kk); }
+    og.restore(); }
   const arial = h.font === 'arial';
   text(og, str, {
     x: V.W - 56, y: V.H - 44, size: arial ? 26 : 22, font: arial ? 'Arial' : 'Geist Mono', weight: arial ? 400 : 500, align: 'right',
@@ -220,6 +230,7 @@ addEventListener('keydown', e => {
   else if (k === '?' || k === 'h' || k === 'H') toggle('help');
   else if (k === '.' || k === 'b' || k === 'B') { black = !black; $('black').classList.toggle('on', black); }
   else if (k === 'Escape') { ['ov', 'help'].forEach(id => toggle(id, false)); }
+  else if (/^[0-9]$/.test(k)) { const i = k === '0' ? 9 : +k - 1; if (i < scenes.length) jump(i); }
   wake();
 });
 let idleT = 0; const wake = () => { document.body.classList.remove('idle'); idleT = 0; };
@@ -274,7 +285,7 @@ function frame(now) {
     pass(m, trRT);
     // motion-blur trail: blend with the previous transition frame, strongest mid-way, none at the ends
     const prev = accRT[accI], nxt = accRT[1 - accI];
-    mAccum.uniforms.tCur.value = trRT.texture; mAccum.uniforms.tPrev.value = prev.texture; mAccum.uniforms.uK.value = tr.fresh ? 0 : .55 * Math.sin(Math.PI * p);
+    mAccum.uniforms.tCur.value = trRT.texture; mAccum.uniforms.tPrev.value = prev.texture; mAccum.uniforms.uK.value = tr.fresh || REDUCED ? 0 : .55 * Math.sin(Math.PI * p);
     pass(mAccum, nxt); accI = 1 - accI; tr.fresh = false; present(nxt);
     if (p >= 1) finishTr();
   } else {

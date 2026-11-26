@@ -87,7 +87,7 @@ body.headless .ui{display:none!important}
 <div id="help" role="dialog" aria-label="Keyboard help"><div class="card">
   <h2>Controls</h2>
   <div><kbd>→</kbd><kbd>Space</kbd>next &nbsp; <kbd>←</kbd>back &nbsp; click / swipe also work</div>
-  <div><kbd>Home</kbd><kbd>End</kbd>first / last slide</div>
+  <div><kbd>Home</kbd><kbd>End</kbd>first / last slide &nbsp; <kbd>1</kbd>–<kbd>9</kbd> jump to a slide</div>
   <div><kbd>F</kbd>fullscreen &nbsp; <kbd>A</kbd>auto-play &nbsp; <kbd>M</kbd>mute</div>
   <div><kbd>N</kbd>speaker notes &nbsp; <kbd>P</kbd>notes window &nbsp; <kbd>O</kbd>overview</div>
   <div><kbd>B</kbd>or <kbd>.</kbd>black screen &nbsp; <kbd>Esc</kbd>close panels</div>
@@ -568,6 +568,7 @@ const AU = (() => {
     zap: t => { osc('sawtooth', 2400, t, .18, .12, .001, .2, 90); noise(t, .12, .3, 'highpass', 5000, 1, null, .2, .001); },
     ding: t => { fm(note(4, 6), 3.01, 1.2, t, 1.6, .08, .5, .25); },
     cricket: t => { const f = 4200 + R_() * 600, p = (R_() - .5) * 1.4; for (let i = 0; i < 4; i++) osc('sine', f, t + i * .032, .016, .018, .002, .25, null, 'hall', 0, p); },
+    clangHit: t => clang(t, note(0, 4), .14),
     stomp: t => { osc('sine', 52, t, .5, .8, .002, .2, 32); noise(t, .2, .3, 'lowpass', 600, 1, 90, .2, .001); },
   };
   function vowel(f, t, dur, peak, pan = 0) {
@@ -1142,7 +1143,7 @@ void main(){ vec2 p=(vUv-.5)*vec2(uAsp,1.); float r=length(p);
           const W = V.W, H = V.H, k = Math.min(W / 1920, H / 1080) * (V.portrait ? 1.6 : 1);
           if (!s.on(1)) {
             text(g, 'A PRESENTATION ON THE NEXT TEN YEARS', { x: W / 2, y: H * .84, size: 18 * k, font: 'Geist Mono', weight: 500, color: 'rgba(255,255,255,.75)', align: 'center', track: .35, anim: 'decode', accent: '#5ef2ff', stagger: .8 }, s.k(0, 1, 3.6, E.lin));
-            text(g, 'press → to begin', { x: W / 2, y: H * .9, size: 14 * k, font: 'Geist Mono', color: 'rgba(255,255,255,.4)', align: 'center', track: .25, anim: 'neon' }, s.k(0, 3.2, 4, E.lin));
+            text(g, 'sound on  ·  press → or tap to begin', { x: W / 2, y: H * .9, size: 14 * k, font: 'Geist Mono', color: 'rgba(255,255,255,.4)', align: 'center', track: .25, anim: 'neon' }, s.k(0, 3.2, 4, E.lin));
           }
           if (s.on(1) && !s.on(2)) {
             text(g, 'What happens when minds start building better minds.', { x: W / 2, y: H * (V.portrait ? .76 : .86), size: (V.portrait ? 30 : 30) * k, font: 'Newsreader', italic: true, color: '#f2ecff', align: 'center', anim: 'blur', by: 'word', maxW: W * .86 }, s.k(1, 6.8, 9, E.lin));
@@ -1819,7 +1820,7 @@ void main(){
 // =====================================================================
 
 {
-  const G = 640, SP = 1.0; // grid of agents
+  const G = Math.min(innerWidth, innerHeight) < 700 ? 400 : 640, SP = 1.0; // grid of agents (lighter on phones)
   const CREAM = '#fbf6ec';
   const KEYS = [
     { u: 0, pos: [1.6, .7, 2.6], look: [0, .25, 0], fov: 38 },
@@ -1830,7 +1831,7 @@ void main(){
     { u: 3, pos: [-60, 140, 260], look: [0, 0, -20], fov: 50 },
     { u: 4, pos: [0, 520, 760], look: [0, 0, -160], fov: 54 },
   ];
-  const RADII = [.01, Math.sqrt(30000 / Math.PI), Math.sqrt(30000 / Math.PI), 300];
+  const RADII = [.01, Math.sqrt(30000 / Math.PI), Math.sqrt(30000 / Math.PI), G / 2 - 18];
   let scene3, cam, agents, arcs, flies, ground;
   function odometer(g, x, y, v, size, color) {
     const digits = Math.max(1, Math.floor(Math.log10(Math.max(1, v))) + 1), str = [];
@@ -2216,6 +2217,125 @@ void main(){ vec3 s=position; float life=fract(s.y+uT*(.25+s.z*.4)); float y0=uB
   });
 }
 
+// ---- 58-protein.js ----
+// =====================================================================
+// 58 · PROTEIN — AI does science. A chain of 420 residues thrashes as an
+// unfolded string, then folds itself into a helix bundle in seconds; the
+// camera pulls back into a galaxy of 200 million predicted structures;
+// a gold Nobel medal turns in the light.
+// =====================================================================
+
+{
+  const NR = 420;
+  const rr = prng(31);
+  // unfolded: a long loose line; folded: 6 alpha-helices packed in a bundle joined by loops
+  const unf = [], fol = [];
+  for (let i = 0; i < NR; i++) unf.push(new THREE.Vector3((i / NR - .5) * 9, Math.sin(i * .21) * .25, Math.cos(i * .17) * .25));
+  {
+    const H = 6, per = Math.floor(NR / H), ring = [[0, 0], [1.05, 0], [.52, .9], [-.52, .9], [-1.05, 0], [-.52, -.9]];
+    for (let h = 0; h < H; h++) {
+      const [cx, cz] = ring[h], dir = h % 2 ? -1 : 1, hel = per - 10;
+      for (let j = 0; j < per; j++) {
+        if (j < hel) { const a = j * 1.745, y = dir * (j / hel - .5) * 3.1; fol.push(new THREE.Vector3(cx + Math.cos(a) * .32, y, cz + Math.sin(a) * .32)); }
+        else { const t = (j - hel) / 10, [nx, nz] = ring[(h + 1) % H]; const yEnd = dir * 1.55; fol.push(new THREE.Vector3(lerp(cx, nx, t), yEnd + dir * Math.sin(t * Math.PI) * .5, lerp(cz, nz, t) + Math.sin(t * Math.PI) * .3)); }
+      }
+    }
+    while (fol.length < NR) fol.push(fol[fol.length - 1].clone());
+  }
+  const KEYS = [
+    { u: 0, pos: [0, .6, 9.5], look: [0, 0, 0], fov: 44 },
+    { u: 1, pos: [4.6, 1.6, 8.2], look: [-.6, 0, 0], fov: 42 },
+    { u: 2, pos: [-3.6, 1.2, 7.8], look: [-.8, 0, 0], fov: 42 },
+    { u: 2.55, pos: [4, 16, 30], look: [0, 0, 0], fov: 50 },
+    { u: 3, pos: [-6, 22, 36], look: [0, 0, 0], fov: 52 },
+    { u: 3.5, pos: [1.8, .6, 7.6], look: [.6, 0, 0], fov: 40 },
+    { u: 4, pos: [2, .5, 7.4], look: [.6, 0, 0], fov: 40 },
+  ];
+  let scene3, cam, beads, bond, galaxy, gMat, medal, keyL;
+  SCENES.push({
+    id: 'protein', title: 'AI does science', enterWith: 'radial', hud: { color: '#9cffd9' },
+    beats: [{ dur: 3, hold: 4 }, { dur: 5, hold: 4 }, { dur: 4, hold: 4 }, { dur: 3.5, hold: 5 }],
+    bed: { chord: [0, 4, 9, 11], oct: 3, cut: 1100, vol: .032, choir: .05, arp: { notes: [0, 4, 7, 11, 9, 7], oct: 5, rate: 2.5, voice: 'fm', ratio: 2, index: .7, len: .9, vol: .022, delay: .45 }, level: [.35, .5, .6, .65] },
+    notes: [
+      'Proteins are the machines of life, and what they do depends on the shape they fold into. Working out one structure experimentally could take years.',
+      'DeepMind\'s AlphaFold predicts a protein\'s 3D structure from its sequence, often in minutes, at accuracy competitive with experiments.',
+      'Its public database holds more than 200 million predicted structures, nearly every protein known to science, free for anyone to use.',
+      'In 2024, Demis Hassabis and John Jumper shared the Nobel Prize in Chemistry for it, alongside David Baker for computational protein design. AI is not just answering questions about science. It is doing science.',
+    ],
+    create() {
+      scene3 = new THREE.Scene(); cam = new THREE.PerspectiveCamera(44, 1.78, .05, 500);
+      scene3.add(new THREE.HemisphereLight(0x9fe8ff, 0x0b0820, .8));
+      keyL = new THREE.DirectionalLight(0xffffff, 2.6); keyL.position.set(3, 4, 5); scene3.add(keyL);
+      const rimL = new THREE.DirectionalLight(0x8f7bff, 1.1); rimL.position.set(-4, 1, -3); scene3.add(rimL);
+      beads = new THREE.InstancedMesh(new THREE.SphereGeometry(.11, 14, 10), new THREE.MeshStandardMaterial({ roughness: .28, metalness: .15, emissive: 0x000000 }), NR);
+      const c = new THREE.Color(); for (let i = 0; i < NR; i++) { c.setHSL(.66 - i / NR * .66, .85, .58); beads.setColorAt(i, c); }
+      beads.frustumCulled = false; scene3.add(beads);
+      bond = new THREE.Line(new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(new Float32Array(NR * 3), 3)), new THREE.LineBasicMaterial({ color: new THREE.Color(.5, .9, 1.4), transparent: true, opacity: .55 }));
+      bond.frustumCulled = false; scene3.add(bond);
+      // the database: a galaxy of tiny folded structures
+      const GN = Math.min(innerWidth, innerHeight) < 700 ? 40000 : 90000, gp = new Float32Array(GN * 3), gc = new Float32Array(GN * 3);
+      for (let i = 0; i < GN; i++) { const arm = i % 4, r = Math.pow(rr(), .55) * 26 + 1.2, a = arm / 4 * 6.283 + r * .32 + (rr() - .5) * .6; gp.set([Math.cos(a) * r, (rr() - .5) * (2.6 - r * .07), Math.sin(a) * r], i * 3); c.setHSL(.66 - rr() * .66, .8, .6); gc.set([c.r, c.g, c.b], i * 3); }
+      const gg = new THREE.BufferGeometry(); gg.setAttribute('position', new THREE.BufferAttribute(gp, 3)); gg.setAttribute('aC', new THREE.BufferAttribute(gc, 3));
+      gMat = shader(`varying vec3 vC; varying float vA; void main(){ vec2 c=gl_PointCoord-.5; float d=dot(c,c); gl_FragColor=vec4(vC*exp(-d*20.)*vA,1.); }`, { uA: { value: 0 }, uT: { value: 0 }, uPx: { value: 1 } },
+        { blend: 'add', vert: `attribute vec3 aC; uniform float uA,uT,uPx; varying vec3 vC; varying float vA; varying vec2 vUv;
+void main(){ vec3 p=position; float a=uT*.03/(length(p.xz)*.08+.4); p.xz=mat2(cos(a),-sin(a),sin(a),cos(a))*p.xz;
+  vec4 mv=modelViewMatrix*vec4(p,1.); gl_Position=projectionMatrix*mv; gl_PointSize=clamp(uPx*.05/-mv.z,1.,3.); vC=aC*1.2; vA=uA*(.5+.5*fract(sin(dot(position,vec3(12.9,78.2,37.7)))*437.)); vUv=vec2(0.); }` });
+      gMat.depthTest = false; galaxy = new THREE.Points(gg, gMat); galaxy.frustumCulled = false; scene3.add(galaxy);
+      // Nobel medal: a gold disc with a raised rim, lit by the key light
+      medal = new THREE.Group();
+      const gold = new THREE.MeshStandardMaterial({ color: 0xf5c451, metalness: .75, roughness: .25, emissive: 0x5a3c08 });
+      const face = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, .09, 64), gold); face.rotation.x = Math.PI / 2;
+      const rim = new THREE.Mesh(new THREE.TorusGeometry(1, .06, 12, 64), gold);
+      const mc = document.createElement('canvas'); mc.width = mc.height = 512; const mg = mc.getContext('2d');
+      mg.fillStyle = '#000'; mg.fillRect(0, 0, 512, 512); mg.fillStyle = '#fff'; mg.font = '600 46px Newsreader, Georgia'; mg.textAlign = 'center'; mg.fillText('NOBEL', 256, 200); mg.fillText('CHEMISTRY', 256, 262); mg.font = '400 40px Newsreader, Georgia'; mg.fillText('MMXXIV', 256, 330);
+      mg.strokeStyle = '#fff'; mg.lineWidth = 6; mg.beginPath(); mg.arc(256, 256, 214, 0, 7); mg.stroke();
+      const relief = new THREE.Mesh(new THREE.CircleGeometry(.95, 64), new THREE.MeshStandardMaterial({ color: 0xe8b443, metalness: .75, roughness: .3, bumpMap: new THREE.CanvasTexture(mc), bumpScale: 2.2, emissive: 0x1a0d00 }));
+      relief.position.z = .047; const warm = new THREE.PointLight(0xffd27a, 6, 6, 1.5); warm.position.set(1.2, 1.2, 2.2); medal.add(face, rim, relief, warm); medal.position.set(2.6, 0, 0); medal.scale.setScalar(0); scene3.add(medal);
+      const M = new THREE.Matrix4(), P = new THREE.Vector3(), S = new THREE.Vector3(1, 1, 1), Q = new THREE.Quaternion();
+      let lastFold = 0;
+      return {
+        update(s) {
+          const u = s.p[0] + s.p[1] + s.p[2] + s.p[3], k = rig(KEYS, u, ['pos', 'look', 'fov']);
+          cam.position.set(k.pos[0] + Math.sin(s.t * .2) * .3 + s.mouse.x * .6, k.pos[1] + s.mouse.y * .4, k.pos[2]); cam.lookAt(...k.look);
+          cam.fov = V.portrait ? k.fov * 1.55 : k.fov; cam.aspect = V.W / V.H; cam.updateProjectionMatrix();
+          const fold = s.on(1) ? s.p[1] : 0, pos = bond.geometry.attributes.position;
+          for (let i = 0; i < NR; i++) {
+            const local = E.io3(clamp(fold * 1.7 - (i / NR) * .7)); // folding sweeps down the chain
+            const th = (1 - local) * .18 + .012;
+            P.copy(unf[i]).lerp(fol[i], local); P.x += Math.sin(s.t * 3 + i * .7) * th; P.y += Math.cos(s.t * 2.6 + i * .5) * th; P.z += Math.sin(s.t * 2.2 + i * .9) * th;
+            if (s.on(3)) P.x -= s.k(3, 0, 1.5) * 1.4;
+            M.compose(P, Q, S); beads.setMatrixAt(i, M); pos.setXYZ(i, P.x, P.y, P.z);
+          }
+          beads.instanceMatrix.needsUpdate = true; pos.needsUpdate = true;
+          const fq = Math.floor(fold * 12); if (fq !== lastFold) { if (fq > lastFold && s.on(1)) AU.hit('bleep', 1.3); lastFold = fq; }
+          gMat.uniforms.uA.value = s.k(2, .2, 2) * (1 - s.k(3, 0, 1.2) * .7); gMat.uniforms.uT.value = s.t; gMat.uniforms.uPx.value = V.H;
+          beads.visible = bond.visible = true;
+          const ms = s.on(3) ? E.outBack(s.k(3, .5, 2, E.lin)) : 0; medal.scale.setScalar(ms * (V.portrait ? .8 : 1)); medal.rotation.y = Math.sin(s.t * .6) * .55 - .25; medal.position.set(V.portrait ? 0 : 1.9, V.portrait ? -1.4 : 0, .5);
+          s.post = { streak: .35, bloom: .55, threshold: 1, vignette: .5, grain: .03, ca: .0015, halation: .35, exposure: 1.05 };
+          if (s.cross(1, .2)) AU.hit('riser'); if (s.cross(1, 4.6)) AU.hit('ding'); if (s.cross(2, .3)) { AU.hit('zoom'); AU.hit('sparkle', 0, .5); } if (s.cross(3, .5)) { AU.hit('clangHit'); AU.hit('choir', 0, .2); AU.hit('bell', 0, .6); }
+          if (s.cross(0, .4)) AU.hit('glass');
+          if (s.bed) s.bed.param('arpRate', [2, 6, 3, 2][s.beat]);
+        },
+        render(slot) { R.setRenderTarget(slot.hdr); R.setClearColor(new THREE.Color(.006, .012, .02), 1); R.clear(); pass2(slot); R.render(scene3, cam); },
+        draw2d(g, s) {
+          const W = V.W, H = V.H, k = Math.min(W / 1920, H / 1080) * (V.portrait ? 1.6 : 1), x = (V.portrait ? 60 : 120) * k, y = H * (V.portrait ? .1 : .16);
+          const out = b => s.beat > b ? clamp(s.at(b + 1) / .5) : 0, mw = V.portrait ? W - 2 * x : W * .46;
+          const HD = ['A protein’s shape\nused to take years.', 'AlphaFold folds it\nin minutes.', '200,000,000+\nstructures.', 'Nobel Prize\nin Chemistry, 2024.'];
+          const CP = ['Each one solved by experiment, one at a time.', 'Google DeepMind · structure from sequence alone', 'AlphaFold Protein Structure Database · free to everyone', 'Demis Hassabis & John Jumper (with David Baker, for protein design)'];
+          const AN = ['wave', 'spring', 'decode', 'flip'];
+          for (let b = 0; b < 4; b++) if (s.beat >= b && out(b) < 1) {
+            text(g, HD[b], { x, y, size: (V.portrait ? 54 : 80) * k, font: 'Unbounded', weight: b === 2 ? 800 : 300, color: b === 2 ? '#9cffd9' : '#fff', track: -.035, lh: 1.06, anim: AN[b], accent: '#ff7ad1', glow: b === 3 ? 'rgba(255,200,90,.5)' : undefined, maxW: mw }, s.k(b, .2, 1.6, E.lin), out(b));
+            text(g, CP[b], { x, y: y + 200 * k, size: 21 * k, font: 'Geist Mono', color: 'rgba(200,255,240,.72)', anim: 'fade', maxW: mw }, s.k(b, 1.2, 2.2, E.lin), out(b));
+          }
+        },
+      };
+    },
+  });
+  // soft lab backdrop: dark teal with drifting caustic light
+  const bgM = shader(`uniform float uT; void main(){ vec2 p=vUv; float c=fbm(p*3.+vec2(uT*.03,uT*.02))*fbm(p*5.-uT*.02); vec3 col=mix(vec3(.004,.016,.024),vec3(.02,.06,.08),c); col+=vec3(.05,.2,.25)*pow(c,3.)*.4; gl_FragColor=vec4(col,1.); }`, { uT: { value: 0 } });
+  function pass2(slot) { bgM.uniforms.uT.value = performance.now() / 1000; pass(bgM, slot.hdr); }
+}
+
 // ---- 60-calendar.js ----
 // =====================================================================
 // 70 · CALENDAR — the compressed century. One printed year, then ten,
@@ -2580,31 +2700,73 @@ void main(){ vec2 p=(vUv-.5)*vec2(uAsp,1.);
 }
 
 // ---------------------------------------------------------------- questions
+// Finale: an hourglass whose sand flows UP. Time, given back.
 {
   const mat = shader(`uniform float uT,uAsp,uRise; void main(){ vec2 p=(vUv-.5)*vec2(uAsp,1.);
-  vec3 c=mix(vec3(.02,.02,.035),vec3(.5,.28,.18),smoothstep(.9,-.6,p.y)*uRise);
-  c+=vec3(1.,.6,.35)*exp(-length(p-vec2(0.,-.75))*2.5)*uRise*.8;
+  vec3 c=mix(vec3(.012,.012,.022),vec3(.32,.17,.1),smoothstep(.9,-.6,p.y)*uRise);
+  c+=vec3(1.,.6,.35)*exp(-length(p-vec2(0.,-.75))*2.5)*uRise*.5;
   for(int i=0;i<18;i++){ float fi=float(i); vec2 o=vec2(sin(fi*7.3+uT*.03*(1.+hash11(fi))),cos(fi*3.1+uT*.025))*vec2(uAsp*.5,.45);
-    float r=.03+hash11(fi+3.)*.07; float d=length(p-o); c+=vec3(1.,.75,.5)*smoothstep(r,r*.7,d)*.05*(.5+.5*sin(uT*.5+fi)); }
+    float r=.03+hash11(fi+3.)*.07; float d=length(p-o); c+=vec3(1.,.75,.5)*smoothstep(r,r*.7,d)*.04*(.5+.5*sin(uT*.5+fi)); }
   gl_FragColor=vec4(c,1.); }`, { uT: { value: 0 }, uAsp: { value: 1.78 }, uRise: { value: 0 } });
+  const SMALL = Math.min(innerWidth, innerHeight) < 700, NS = SMALL ? 14000 : 30000;
+  const rb = yy => .06 + .62 * Math.pow(Math.sin(Math.min(1, Math.max(0, (yy - .04) / .92)) * Math.PI), .75);
+  let scene3, cam, glass, sand, sMat, rig3;
   SCENES.push({
     id: 'questions', title: 'Questions', enterWith: 'daybreak', hud: { color: '#ffffff', alpha: .6 },
     beats: [{ dur: 5, hold: 8 }, { dur: 2, hold: 20 }],
-    bed: { chord: [0, 4, 7, 14], oct: 3, cut: 1000, vol: .04, choir: .15, level: [.6, .45] },
+    bed: { chord: [0, 4, 7, 14], oct: 3, cut: 1000, vol: .04, choir: .15, arp: { notes: [14, 11, 9, 7, 4], oct: 5, rate: .8, voice: 'fm', ratio: 3.5, index: 1, len: 2, vol: .018, delay: .5 }, level: [.6, .45] },
     notes: [
-      'If it goes well, the most precious thing it gives us back is time. So: what will you do with it?',
-      'Sources: Metaculus community forecasts and AI Impacts expert surveys; DataReportal Digital 2026; hyperscaler 2026 capex guidance and BloombergNEF; IMO 2025 gold-level results; Humanity\'s Last Exam leaderboards; METR time-horizon research (2025–2026); Anthropic, September 2026 report on AI-led R&D; OpenAI, September 2026 Navier–Stokes announcement (under review); Alpöge and Claude, Lean proof of the Riemann hypothesis (Nov 2026); Dario Amodei, “Machines of Loving Grace” (2024); I. J. Good (1965).',
+      'If it goes well, the most precious thing it gives us back is time. The sand is running the other way. So: what will you do with it?',
+      'Sources: Metaculus community forecasts and AI Impacts expert surveys; DataReportal Digital 2026; hyperscaler 2026 capex guidance and BloombergNEF; IMO 2025 gold-level results; Humanity\'s Last Exam leaderboards; AlphaFold and the 2024 Nobel Prize in Chemistry; METR time-horizon research (2025–2026); Anthropic, September 2026 report on AI-led R&D; OpenAI, September 2026 Navier–Stokes announcement (under review); Alpöge and Claude, Lean proof of the Riemann hypothesis (Nov 2026); Dario Amodei, “Machines of Loving Grace” (2024).',
     ],
     create() {
+      scene3 = new THREE.Scene(); cam = new THREE.PerspectiveCamera(36, 1.78, .1, 50); rig3 = new THREE.Group(); scene3.add(rig3);
+      scene3.add(new THREE.HemisphereLight(0xffe2c0, 0x1a1020, .9)); const kl = new THREE.DirectionalLight(0xffd9a8, 2.6); kl.position.set(2, 3, 4); scene3.add(kl);
+      // glass: a lathe of the bulb profile, drawn as a fresnel shell with a moving highlight
+      const prof = []; for (let i = 0; i <= 80; i++) { const y = -1 + i / 40; prof.push(new THREE.Vector2(rb(Math.abs(y)) + .035, y)); }
+      glass = new THREE.Mesh(new THREE.LatheGeometry(prof, 72), shader(`varying vec3 vN; varying vec3 vV; uniform float uT;
+void main(){ vec3 n=normalize(vN), v=normalize(vV); float f=pow(1.-abs(dot(n,v)),2.2);
+  float hl=exp(-pow((n.x+.55+.08*sin(uT*.6))*9.,2.))*.9+exp(-pow((n.x-.7)*14.,2.))*.35;
+  gl_FragColor=vec4(vec3(.75,.88,1.)*(f*.32+.012)+vec3(1.)*hl*.22,1.); }`, { uT: { value: 0 } },
+        { blend: 'add', side: THREE.DoubleSide, vert: `varying vec3 vN; varying vec3 vV; varying vec2 vUv; void main(){ vec4 mv=modelViewMatrix*vec4(position,1.); vN=normalMatrix*normal; vV=-mv.xyz; vUv=uv; gl_Position=projectionMatrix*mv; }` }));
+      glass.material.depthWrite = false; glass.renderOrder = 3;
+      const brass = new THREE.MeshStandardMaterial({ color: 0xc99145, metalness: .85, roughness: .32 });
+      const capT = new THREE.Mesh(new THREE.CylinderGeometry(.82, .82, .09, 48), brass); capT.position.y = 1.05;
+      const capB = capT.clone(); capB.position.y = -1.05;
+      rig3.add(glass, capT, capB);
+      for (let i = 0; i < 3; i++) { const post = new THREE.Mesh(new THREE.CylinderGeometry(.03, .03, 2.1, 12), brass); const a = i / 3 * 6.283 + .4; post.position.set(Math.cos(a) * .74, 0, Math.sin(a) * .74); rig3.add(post); }
+      // sand: every grain knows its rank; ranks below the fill level sit in the TOP bulb (time flowing back), a thin band streams up the neck
+      const sp = new Float32Array(NS * 3), sa = new Float32Array(NS * 4); for (let i = 0; i < NS; i++) sa.set([i / NS, Math.random() * 6.283, Math.random(), Math.random()], i * 4);
+      const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.BufferAttribute(sp, 3)); sg.setAttribute('aS', new THREE.BufferAttribute(sa, 4));
+      sMat = shader(`varying vec3 vC; void main(){ vec2 c=gl_PointCoord-.5; if(dot(c,c)>.25) discard; gl_FragColor=vec4(vC,1.); }`, { uF: { value: 0 }, uT: { value: 0 }, uPx: { value: 1 } },
+        { depth: true, vert: `attribute vec4 aS; uniform float uF,uT,uPx; varying vec3 vC; varying vec2 vUv;
+float rb(float yy){ return .06+.62*pow(sin(clamp((yy-.04)/.92,0.,1.)*3.14159),.75); }
+void main(){ float q=aS.x, f=uF, w=.012; float ht=f*.82, hb=(1.-f)*.82; vec3 p; float lit=1.;
+  if(q<f){ float u=q/max(f,1e-4); float y=.95-u*ht; float r=rb(abs(y))*.9*sqrt(aS.z); p=vec3(cos(aS.y)*r,y,sin(aS.y)*r); }
+  else if(q<f+w){ float u=(q-f)/w; u=fract(u+uT*1.3); float y=mix(-.95+hb,.95-ht,u); float r=.012*sqrt(aS.z); p=vec3(cos(aS.y)*r,y,sin(aS.y)*r); lit=1.6; }
+  else { float u=(q-f-w)/max(1.-f-w,1e-4); float y=-.95+u*hb; float r=rb(abs(y))*.9*sqrt(aS.z); p=vec3(cos(aS.y)*r,y,sin(aS.y)*r); }
+  vec4 mv=modelViewMatrix*vec4(p,1.); gl_Position=projectionMatrix*mv; gl_PointSize=clamp(uPx*.012/-mv.z,1.,4.);
+  vC=mix(vec3(.95,.62,.25),vec3(1.,.85,.5),aS.w)*(.55+.45*aS.z)*lit; vUv=vec2(0.); }` });
+      sand = new THREE.Points(sg, sMat); sand.frustumCulled = false; rig3.add(sand);
       return {
-        update(s) { s.post = { bloom: .6, threshold: .6, vignette: .5, grain: .03, ca: .001 }; if (s.cross(0, 1.2)) AU.hit('glass'); if (s.cross(0, 3)) AU.hit('rise'); if (s.cross(0, 1.6)) AU.hit('choir'); if (s.cross(1, .3)) AU.hit('bell'); for (let i = 0; i < 7; i++) if (s.cross(1, .2 + i * .15)) AU.hit('type'); },
-        render(slot, s) { mat.uniforms.uT.value = s.t; mat.uniforms.uAsp.value = V.W / V.H; mat.uniforms.uRise.value = s.k(0, 0, 5, E.io2); pass(mat, slot.hdr); },
+        update(s) {
+          s.post = { bloom: .45, threshold: 1.2, vignette: .5, grain: .03, ca: .001, streak: .15 };
+          sMat.uniforms.uF.value = Math.min(.96, s.t * .035); sMat.uniforms.uT.value = s.t; sMat.uniforms.uPx.value = V.H;
+          glass.material.uniforms.uT.value = s.t;
+          const port = V.portrait, gone = port && s.on(1) ? s.k(1, 0, 1) : 0;
+          rig3.position.set(port ? 0 : 1.55, port ? -.55 : -.05, 0); rig3.rotation.set(.08 + s.mouse.y * .1, s.t * .12 + s.mouse.x * .4, Math.sin(s.t * .3) * .03);
+          rig3.scale.setScalar(Math.max(.001, E.outBack(s.k(0, .2, 1.6, E.lin)) * (port ? .82 : 1) * (1 - gone)));
+          cam.position.set(0, .15, port ? 7.4 : 5.2); cam.lookAt(0, 0, 0); cam.aspect = V.W / V.H; cam.updateProjectionMatrix();
+          if (s.cross(0, 1.2)) AU.hit('glass'); if (s.cross(0, 3)) AU.hit('rise'); if (s.cross(0, 1.6)) AU.hit('choir'); if (s.cross(1, .3)) AU.hit('bell'); for (let i = 0; i < 8; i++) if (s.cross(1, .2 + i * .15)) AU.hit('type');
+          if (Math.random() < s.dt * 7) AU.hit('scratch');
+        },
+        render(slot, s) { mat.uniforms.uT.value = s.t; mat.uniforms.uAsp.value = V.W / V.H; mat.uniforms.uRise.value = s.k(0, 0, 5, E.io2); pass(mat, slot.hdr); R.setRenderTarget(slot.hdr); R.render(scene3, cam); },
         draw2d(g, s) {
-          const W = V.W, H = V.H, k = Math.min(W / 1920, H / 1080) * (V.portrait ? 1.6 : 1);
-          text(g, 'What will you do\nwith the time?', { x: W / 2, y: H * .45, size: (V.portrait ? 80 : 150) * k, font: 'Newsreader', italic: true, weight: 400, color: '#fbf6ec', align: 'center', valign: 'middle', track: -.02, lh: 1.02, anim: 'blur', by: 'word', stagger: .6 }, s.k(0, 1.2, 4.2, E.lin), s.on(1) ? clamp(s.at(1) / .8) * .0 : 0);
+          const W = V.W, H = V.H, k = Math.min(W / 1920, H / 1080) * (V.portrait ? 1.6 : 1), port = V.portrait, x = port ? W / 2 : 130 * k;
+          text(g, 'What will you do\nwith the time?', { x, y: port ? H * .13 : H * .36, size: (port ? 72 : 128) * k, font: 'Newsreader', italic: true, weight: 400, color: '#fbf6ec', align: port ? 'center' : 'left', valign: 'middle', track: -.02, lh: 1.02, anim: 'blur', by: 'word', stagger: .6, glow: 'rgba(255,170,90,.25)' }, s.k(0, 1.2, 4.2, E.lin));
           if (s.on(1)) {
-            const src = ['Metaculus community forecasts (2020; Feb 2026) · AI Impacts expert surveys (2022, 2023)', 'METR · time-horizon research, 2025–2026', 'Anthropic · AI-led R&D report, September 2026 (self-reported)', 'DataReportal Digital 2026 · hyperscaler capex plans 2026 (company guidance, BNEF)', 'IMO 2025 gold-level results (Google DeepMind, OpenAI) · Humanity’s Last Exam leaderboards', 'OpenAI Navier–Stokes (under review) · Alpöge & Claude, Lean proof of RH (Nov 2026)', 'Dario Amodei · “Machines of Loving Grace”, 2024'];
-            src.forEach((l, i) => text(g, l, { x: W / 2, y: H * .7 + i * 28 * k, size: 19 * k, font: 'Geist Mono', weight: 400, color: 'rgba(251,246,236,.6)', align: 'center', anim: 'fade' }, s.k(1, .2 + i * .15, 1 + i * .15, E.lin)));
+            const src = ['Metaculus forecasts (2020; Feb 2026) · AI Impacts expert surveys (2022, 2023)', 'METR · time-horizon research, 2025–2026', 'Anthropic · AI-led R&D report, Sep 2026 (self-reported)', 'DataReportal Digital 2026 · 2026 hyperscaler capex plans (guidance, BNEF)', 'IMO 2025 gold-level results · Humanity’s Last Exam leaderboards', 'AlphaFold DB · 2024 Nobel Prize in Chemistry', 'OpenAI Navier–Stokes (under review) · Alpöge & Claude, Lean proof of RH', 'Dario Amodei · “Machines of Loving Grace”, 2024'];
+            src.forEach((l, i) => text(g, l, { x, y: (port ? H * .7 : H * .6) + i * 27 * k, size: (port ? 15 : 18) * k, font: 'Geist Mono', weight: 400, color: 'rgba(251,246,236,.62)', align: port ? 'center' : 'left', anim: 'decode', accent: '#ffb36b', maxW: port ? W - 40 * k : W * .5 }, s.k(1, .2 + i * .15, 1.2 + i * .15, E.lin)));
           }
         },
       };
@@ -2650,6 +2812,10 @@ function resize() {
 }
 const canvas2 = R.domElement;
 
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+// graphics context loss (GPU reset, tab backgrounded on some phones): tell the viewer and reload cleanly
+canvas2.addEventListener('webglcontextlost', e => { e.preventDefault(); const d = document.createElement('div'); d.id = 'lost'; d.textContent = 'Graphics were reset. Reloading…'; d.style.cssText = 'position:fixed;inset:0;display:grid;place-items:center;background:#030308;color:#cfd3ff;font:500 13px "Geist Mono",monospace;letter-spacing:.3em;z-index:40'; document.body.appendChild(d); }, false);
+canvas2.addEventListener('webglcontextrestored', () => location.reload(), false);
 const mAccum = shader(`uniform sampler2D tCur, tPrev; uniform float uK; void main(){ gl_FragColor=vec4(mix(texture(tCur,vUv).rgb,texture(tPrev,vUv).rgb,uK),1.); }`, { tCur: { value: null }, tPrev: { value: null }, uK: { value: 0 } });
 // ---------- present pass (dither + black) ----------
 const mPresent = shader(`uniform sampler2D tSrc; uniform float uBlack, uTime;
@@ -2689,6 +2855,12 @@ function drawHUD(sc, og) {
   const str = s.page ?? beat.page ?? String(sc.s.idx + 1);
   let st = hudState.get(sc); if (!st || st.str !== str) { st = { str, t: tNow }; hudState.set(sc, st); }
   if (h.hidden || s.hideHud) return;
+  // deck progress: one segment per slide, the current one filling beat by beat
+  { const n = scenes.length, kk = Math.min(V.W / 1920, V.H / 1080) * (V.portrait ? 1.6 : 1), tw = Math.min(V.W * .3, 300 * kk), gap = 4 * kk, sw = (tw - gap * (n - 1)) / n, y = V.H - 40 * kk, x0 = 56 * kk;
+    const col = s.hudColor || h.color || '#fff';
+    og.save(); og.globalAlpha = .55;
+    for (let i = 0; i < n; i++) { const f = i < sc.s.idx ? 1 : i > sc.s.idx ? 0 : clamp((s.beat + s.p[s.beat]) / s.beats.length); og.fillStyle = 'rgba(255,255,255,.18)'; og.fillRect(x0 + i * (sw + gap), y, sw, 2 * kk); og.fillStyle = col; og.fillRect(x0 + i * (sw + gap), y, sw * f, 2 * kk); }
+    og.restore(); }
   const arial = h.font === 'arial';
   text(og, str, {
     x: V.W - 56, y: V.H - 44, size: arial ? 26 : 22, font: arial ? 'Arial' : 'Geist Mono', weight: arial ? 400 : 500, align: 'right',
@@ -2833,6 +3005,7 @@ addEventListener('keydown', e => {
   else if (k === '?' || k === 'h' || k === 'H') toggle('help');
   else if (k === '.' || k === 'b' || k === 'B') { black = !black; $('black').classList.toggle('on', black); }
   else if (k === 'Escape') { ['ov', 'help'].forEach(id => toggle(id, false)); }
+  else if (/^[0-9]$/.test(k)) { const i = k === '0' ? 9 : +k - 1; if (i < scenes.length) jump(i); }
   wake();
 });
 let idleT = 0; const wake = () => { document.body.classList.remove('idle'); idleT = 0; };
@@ -2887,7 +3060,7 @@ function frame(now) {
     pass(m, trRT);
     // motion-blur trail: blend with the previous transition frame, strongest mid-way, none at the ends
     const prev = accRT[accI], nxt = accRT[1 - accI];
-    mAccum.uniforms.tCur.value = trRT.texture; mAccum.uniforms.tPrev.value = prev.texture; mAccum.uniforms.uK.value = tr.fresh ? 0 : .55 * Math.sin(Math.PI * p);
+    mAccum.uniforms.tCur.value = trRT.texture; mAccum.uniforms.tPrev.value = prev.texture; mAccum.uniforms.uK.value = tr.fresh || REDUCED ? 0 : .55 * Math.sin(Math.PI * p);
     pass(mAccum, nxt); accI = 1 - accI; tr.fresh = false; present(nxt);
     if (p >= 1) finishTr();
   } else {

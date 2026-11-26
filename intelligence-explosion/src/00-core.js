@@ -469,6 +469,7 @@ const AU = (() => {
     zap: t => { osc('sawtooth', 2400, t, .18, .12, .001, .2, 90); noise(t, .12, .3, 'highpass', 5000, 1, null, .2, .001); },
     ding: t => { fm(note(4, 6), 3.01, 1.2, t, 1.6, .08, .5, .25); },
     cricket: t => { const f = 4200 + R_() * 600, p = (R_() - .5) * 1.4; for (let i = 0; i < 4; i++) osc('sine', f, t + i * .032, .016, .018, .002, .25, null, 'hall', 0, p); },
+    clangHit: t => clang(t, note(0, 4), .14),
     stomp: t => { osc('sine', 52, t, .5, .8, .002, .2, 32); noise(t, .2, .3, 'lowpass', 600, 1, 90, .2, .001); },
   };
   function vowel(f, t, dur, peak, pan = 0) {
