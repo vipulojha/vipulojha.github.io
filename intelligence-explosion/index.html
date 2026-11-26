@@ -207,6 +207,7 @@ function makeRT(w, h, o = {}) {
   const rt = new THREE.WebGLRenderTarget(Math.max(2, w | 0), Math.max(2, h | 0), {
     type: o.ldr ? THREE.UnsignedByteType : HDR, depthBuffer: !!o.depth, stencilBuffer: false,
     minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, generateMipmaps: false, colorSpace: THREE.NoColorSpace,
+    samples: o.samples ? Math.min(o.samples, R.capabilities.maxSamples || 0) : 0,
   });
   if (o.depthTex) { rt.depthTexture = new THREE.DepthTexture(rt.width, rt.height); rt.depthBuffer = true; }
   return rt;
@@ -1539,6 +1540,7 @@ void main(){
   const fmtM = m => m < 1 ? `${Math.round(m * 100)} cm` : m < 1000 ? `${m < 10 ? m.toFixed(1) : Math.round(m)} m` : `${(m / 1000).toFixed(1)} km`;
 
   let scene3, cam, rcam, mesh, ground, sparks, sparkMat, dust, dustMat, keyL, lastHit = -1, impactT = -1;
+  const foot = Array.from({ length: N }, () => new THREE.Vector4(0, 0, 0, 1));
   const impT = new Float32Array(N), impX = new Float32Array(N), impC = [];
   for (let k = 0; k < N; k++) { impT[k] = T0[k] + dur(k); impX[k] = k < N - 1 ? xs[k + 1] : xs[k] + h(k) * .6; impC.push(hue(k)); }
   const sky = shader(`uniform float uT,uP; void main(){ float y=vUv.y;
@@ -1559,25 +1561,56 @@ void main(){
     create() {
       scene3 = new THREE.Scene(); cam = new THREE.PerspectiveCamera(40, 1.78, .05, 1e6); rcam = cam.clone();
       // face: obsidian with glowing pips + neon border (used as emissive map)
-      const fc = document.createElement('canvas'); fc.width = 256; fc.height = 512; const g = fc.getContext('2d');
-      g.fillStyle = '#000'; g.fillRect(0, 0, 256, 512); g.strokeStyle = '#fff'; g.lineWidth = 7; g.strokeRect(10, 10, 236, 492); g.fillStyle = '#fff'; g.fillRect(40, 252, 176, 8);
-      const pip = (x, y) => { g.beginPath(); g.arc(x, y, 19, 0, 7); g.fill(); };
-      [[128, 128], [72, 72], [184, 184], [72, 184], [184, 72]].forEach(p => pip(...p)); [[72, 330], [184, 330], [72, 440], [184, 440], [72, 385], [184, 385]].forEach(p => pip(...p));
-      const em = new THREE.CanvasTexture(fc);
+      // ---- high-quality face: 512×1024 emissive map with soft halos, plus a matching bump map so pips are engraved
+      const FW = 512, FH = 1024, pipsAt = [[256, 256], [144, 144], [368, 368], [144, 368], [368, 144], [144, 660], [368, 660], [144, 880], [368, 880], [144, 770], [368, 770]];
+      const faceCanvas = (glow) => { const c = document.createElement('canvas'); c.width = FW; c.height = FH; const g = c.getContext('2d');
+        g.fillStyle = glow ? '#000' : '#fff'; g.fillRect(0, 0, FW, FH);
+        const ink = glow ? '#fff' : '#000';
+        if (glow) { g.shadowColor = 'rgba(255,255,255,.9)'; g.shadowBlur = 26; }
+        g.strokeStyle = ink; g.lineWidth = 9; g.beginPath(); g.roundRect(22, 22, FW - 44, FH - 44, 26); g.stroke();
+        g.fillStyle = ink; g.beginPath(); g.roundRect(80, FH / 2 - 7, FW - 160, 14, 7); g.fill();
+        for (const [x, y] of pipsAt) { g.beginPath(); g.arc(x, y, 38, 0, 7); g.fill(); }
+        if (glow) { g.shadowBlur = 0; g.fillStyle = '#fff'; for (const [x, y] of pipsAt) { g.beginPath(); g.arc(x, y, 30, 0, 7); g.fill(); } }
+        return c; };
+      const aniso = R.capabilities.getMaxAnisotropy();
+      const em = new THREE.CanvasTexture(faceCanvas(true)); em.anisotropy = aniso;
+      const bump = new THREE.CanvasTexture(faceCanvas(false)); bump.anisotropy = aniso;
       const tint = m => { m.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n#ifdef USE_INSTANCING_COLOR\n totalEmissiveRadiance *= vColor * 1.5;\n#endif'); }; return m; };
-      const face = tint(new THREE.MeshStandardMaterial({ color: 0x0a0a10, roughness: .22, metalness: .5, emissive: 0xffffff, emissiveMap: em }));
-      const side = tint(new THREE.MeshStandardMaterial({ color: 0x0c0c14, roughness: .18, metalness: .6, emissive: 0x000000 }));
-      const geo = new THREE.BoxGeometry(1, 1, 1); geo.translate(.5, .5, 0);
+      // ---- lacquered obsidian: clear-coated, reflecting a custom neon studio environment
+      const face = tint(new THREE.MeshPhysicalMaterial({ color: 0x07070b, roughness: .34, metalness: .15, clearcoat: 1, clearcoatRoughness: .07, emissive: 0xffffff, emissiveMap: em, bumpMap: bump, bumpScale: 1.6, envMapIntensity: .9 }));
+      const side = tint(new THREE.MeshPhysicalMaterial({ color: 0x08080d, roughness: .3, metalness: .2, clearcoat: 1, clearcoatRoughness: .06, emissive: 0x000000, envMapIntensity: 1 }));
+      {
+        const envScene = new THREE.Scene();
+        envScene.add(new THREE.Mesh(new THREE.SphereGeometry(50, 32, 16), shader(`varying vec3 vP; void main(){ float y=normalize(vP).y; vec3 c=mix(vec3(.25,.05,.22),vec3(.01,.01,.03),smoothstep(-.1,.6,y)); c=mix(vec3(.02,.01,.02),c,smoothstep(-.4,0.,y)); gl_FragColor=vec4(c,1.); }`, {}, { side: THREE.BackSide, vert: `varying vec3 vP; varying vec2 vUv; void main(){ vP=position; vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }` })));
+        const panel = (w, h, col, x, y, z) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: col, side: THREE.DoubleSide })); m.position.set(x, y, z); m.lookAt(0, 0, 0); envScene.add(m); };
+        panel(4, 30, new THREE.Color(.3, 2.2, 3), -24, 6, 10); panel(4, 30, new THREE.Color(3, .4, 1.8), 24, 4, -12); panel(30, 6, new THREE.Color(2.4, 2.2, 2.6), 0, 30, 6); panel(12, 3, new THREE.Color(3, 1.6, .6), 8, 8, 26);
+        const pm = new THREE.PMREMGenerator(R); scene3.environment = pm.fromScene(envScene, .02).texture; pm.dispose();
+      }
+      // ---- rounded geometry in true domino proportions (thickness .16, height 1, width .5), vertices clustered at the bevels
+      const geo = (() => {
+        const Wd = .16, Ht = 1, Dp = .5, r = .022, g = new THREE.BoxGeometry(Wd, Ht, Dp, 10, 24, 16);
+        const pos = g.attributes.position, nor = g.attributes.normal, uv = g.attributes.uv, v = new THREE.Vector3(), c = new THREE.Vector3(), n = new THREE.Vector3();
+        const bend = (u, L) => { const t = u / (L / 2), a = Math.abs(t); return Math.sign(t) * (1 - Math.pow(1 - a, 2.2)) * L / 2; };
+        for (let i = 0; i < pos.count; i++) {
+          v.fromBufferAttribute(pos, i); v.set(bend(v.x, Wd), bend(v.y, Ht), bend(v.z, Dp));
+          c.set(clamp(v.x, -Wd / 2 + r, Wd / 2 - r), clamp(v.y, -Ht / 2 + r, Ht / 2 - r), clamp(v.z, -Dp / 2 + r, Dp / 2 - r));
+          n.subVectors(v, c); if (n.lengthSq() > 1e-12) { n.normalize(); v.copy(c).addScaledVector(n, r); nor.setXYZ(i, n.x, n.y, n.z); }
+          pos.setXYZ(i, v.x, v.y, v.z);
+        }
+        // face UVs from position so the pips never stretch
+        for (const grp of g.groups.slice(0, 2)) for (let j = grp.start; j < grp.start + grp.count; j++) { const i = g.index.getX(j); v.fromBufferAttribute(pos, i); uv.setXY(i, grp.materialIndex === 0 ? .5 - v.z / Dp : .5 + v.z / Dp, v.y / Ht + .5); }
+        g.translate(Wd / 2, Ht / 2, 0); return g;
+      })();
       mesh = new THREE.InstancedMesh(geo, [face, face, side, side, side, side], N); mesh.frustumCulled = false; mesh.castShadow = true; mesh.receiveShadow = true;
       for (let k = 0; k < N; k++) mesh.setColorAt(k, hue(k));
       scene3.add(mesh);
-      scene3.add(new THREE.HemisphereLight(0x5a3a8a, 0x05030a, .7));
+      scene3.add(new THREE.HemisphereLight(0x5a3a8a, 0x05030a, .45));
       keyL = new THREE.DirectionalLight(0xffc6e8, 2.4); scene3.add(keyL, keyL.target);
-      keyL.castShadow = true; keyL.shadow.mapSize.set(2048, 2048); keyL.shadow.bias = -.0004; keyL.shadow.normalBias = .02;
+      keyL.castShadow = true; keyL.shadow.mapSize.set(Math.min(innerWidth, innerHeight) < 700 ? 2048 : 4096, Math.min(innerWidth, innerHeight) < 700 ? 2048 : 4096); keyL.shadow.bias = -.0004; keyL.shadow.normalBias = .02;
       const rim1 = new THREE.DirectionalLight(0x34e8ff, 3.5); rim1.position.set(.7, .35, -.6); scene3.add(rim1);
       const rim2 = new THREE.DirectionalLight(0xff3fa8, 2.5); rim2.position.set(-.8, .2, -.5); scene3.add(rim2);
       // mirror floor: true planar reflection (sampled through the mirrored camera), log grid, shockwaves
-      ground = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), shader(`varying vec3 vW; varying vec4 vR; uniform sampler2D tRefl; uniform float uScale,uTf,uHasRefl; uniform float uImp[${N}]; uniform float uX[${N}]; uniform vec3 uCol[${N}];
+      ground = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), shader(`varying vec3 vW; varying vec4 vR; uniform sampler2D tRefl; uniform float uScale,uTf,uHasRefl; uniform vec4 uFoot[${N}]; uniform float uImp[${N}]; uniform float uX[${N}]; uniform vec3 uCol[${N}];
 float grid(vec2 p,float s){ vec2 q=abs(fract(p/s-.5)-.5)*s; vec2 w=fwidth(p)*1.2; vec2 l=1.-smoothstep(vec2(0.),w,q); return max(l.x,l.y)*clamp(1.-length(fwidth(p))/s*4.,0.,1.); }
 void main(){ float lg=log(uScale)/log(10.); float f=fract(lg); float s0=pow(10.,floor(lg));
   vec3 c=vec3(.006,.005,.01);
@@ -1585,12 +1618,14 @@ void main(){ float lg=log(uScale)/log(10.); float f=fract(lg); float s0=pow(10.,
   if(uHasRefl>.5){ float b=.004; refl=(texture(tRefl,ruv).rgb*2.+texture(tRefl,ruv+vec2(b,0.)).rgb+texture(tRefl,ruv-vec2(b,0.)).rgb+texture(tRefl,ruv+vec2(0.,b*1.5)).rgb+texture(tRefl,ruv-vec2(0.,b*1.5)).rgb)/6.; }
   vec3 V=normalize(cameraPosition-vW); float fres=.25+.75*pow(1.-max(V.y,0.),4.);
   c+=refl*fres*.85*(.9+.1*vnoise(vW.xz/s0*4.));
+  float ao=0.; for(int k=0;k<${N};k++){ vec4 F=uFoot[k]; float dx=max(max(F.x-vW.x,vW.x-F.y),0.), dz=max(abs(vW.z)-F.z,0.); ao+=exp(-length(vec2(dx,dz))/(F.w*.05))*.75; }
+  c*=1.-min(ao,.85);
   float g=grid(vW.xz,s0)*(1.-f)+grid(vW.xz,s0*10.);
   c+=vec3(.25,.6,1.)*g*.12;
   for(int k=0;k<${N};k++){ float t=uTf-uImp[k]; if(t<0.||t>3.5) continue; float hk=pow(1.5,float(k));
     float r=t*hk*(1.2+float(k==${N - 1})*1.6); float d=abs(length(vW.xz-vec2(uX[k],0.))-r);
     c+=uCol[k]*exp(-d/(hk*.03+r*.02))*.9*exp(-t*1.3)*(1.+float(k==${N - 1})*3.); }
-  gl_FragColor=vec4(c,1.); }`, { tRefl: { value: null }, uScale: { value: 1 }, uTf: { value: 0 }, uHasRefl: { value: 0 }, uImp: { value: impT }, uX: { value: impX }, uCol: { value: impC }, uRVP: { value: new THREE.Matrix4() } },
+  gl_FragColor=vec4(c,1.); }`, { tRefl: { value: null }, uScale: { value: 1 }, uTf: { value: 0 }, uHasRefl: { value: 0 }, uFoot: { value: foot }, uImp: { value: impT }, uX: { value: impX }, uCol: { value: impC }, uRVP: { value: new THREE.Matrix4() } },
         { depth: true, vert: `uniform mat4 uRVP; varying vec3 vW; varying vec4 vR; varying vec2 vUv; void main(){ vec4 w=modelMatrix*vec4(position,1.); vW=w.xyz; vR=uRVP*w; vUv=uv; gl_Position=projectionMatrix*viewMatrix*w; }` }));
       ground.rotation.x = -Math.PI / 2; scene3.add(ground);
       // sparks thrown at every impact, in that domino's hue
@@ -1629,7 +1664,8 @@ void main(){ float t=max(uT,0.); float k=1.-exp(-t*1.2);
           for (let k = 0; k < N; k++) {
             const hk = h(k), th = angle(k, tf);
             Q.setFromAxisAngle(Z, -th); OFF.set(-hk * .16, 0, 0).applyQuaternion(Q);
-            M.compose(P.set(xs[k] + hk * .16, 0, 0).add(OFF), Q, S.set(hk * .16, hk, hk * .5)); mesh.setMatrixAt(k, M);
+            M.compose(P.set(xs[k] + hk * .16, 0, 0).add(OFF), Q, S.set(hk, hk, hk)); mesh.setMatrixAt(k, M);
+            foot[k].set(xs[k] + hk * .16 - hk * .16, xs[k] + hk * .16 + Math.max(Math.sin(th) * hk * .55, 0), hk * .25, hk);
             if (k > lastHit && tf >= impT[k]) { lastHit = k; if (s.on(1) && !s.on(2) && s.dir > 0) AU.hit('domino', k / (N - 1)); if (k > 18 && s.on(1) && !s.on(2) && s.dir > 0) AU.hit('stomp'); if (k === N - 1) { impactT = impT[k]; if (s.on(1) && !s.on(2)) { AU.hit('boom'); AU.hit('shimmer'); AU.hit('thunder'); AU.hit('choir', 0, .6); } } }
           }
           mesh.instanceMatrix.needsUpdate = true;
@@ -2804,7 +2840,8 @@ let trRT = null, accRT = [null, null], accI = 0;
 function sizeSlots() {
   for (const s of slots) {
     [s.hdr, s.aux, s.ldr].forEach(r => r && r.dispose());
-    s.hdr = makeRT(PW, PH, { depth: true }); s.aux = makeRT(PW, PH, { depthTex: true }); s.ldr = makeRT(PW, PH, { ldr: true });
+    // MSAA on the main scene target: clean 3D edges
+    s.hdr = makeRT(PW, PH, { depth: true, samples: Math.min(CW, CH) < 700 ? 2 : 4 }); s.aux = makeRT(PW, PH, { depthTex: true }); s.ldr = makeRT(PW, PH, { ldr: true });
     s.oc.width = PW; s.oc.height = PH; s.otex.dispose();
   }
   trRT && trRT.dispose(); trRT = makeRT(PW, PH, { ldr: true });
@@ -3101,7 +3138,7 @@ async function boot() {
   last = performance.now(); requestAnimationFrame(frame);
   window.__deck = { AU, next, back, jump, scenes, get cur() { return cur; }, get tr() { return tr; } };
 }
-boot();
+boot().catch(e => console.error('BOOT', e && e.stack || e));
 
 </script>
 </body>

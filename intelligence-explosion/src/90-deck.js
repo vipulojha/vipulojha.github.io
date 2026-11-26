@@ -20,7 +20,8 @@ let trRT = null, accRT = [null, null], accI = 0;
 function sizeSlots() {
   for (const s of slots) {
     [s.hdr, s.aux, s.ldr].forEach(r => r && r.dispose());
-    s.hdr = makeRT(PW, PH, { depth: true }); s.aux = makeRT(PW, PH, { depthTex: true }); s.ldr = makeRT(PW, PH, { ldr: true });
+    // MSAA on the main scene target: clean 3D edges
+    s.hdr = makeRT(PW, PH, { depth: true, samples: Math.min(CW, CH) < 700 ? 2 : 4 }); s.aux = makeRT(PW, PH, { depthTex: true }); s.ldr = makeRT(PW, PH, { ldr: true });
     s.oc.width = PW; s.oc.height = PH; s.otex.dispose();
   }
   trRT && trRT.dispose(); trRT = makeRT(PW, PH, { ldr: true });
@@ -317,4 +318,4 @@ async function boot() {
   last = performance.now(); requestAnimationFrame(frame);
   window.__deck = { AU, next, back, jump, scenes, get cur() { return cur; }, get tr() { return tr; } };
 }
-boot();
+boot().catch(e => console.error('BOOT', e && e.stack || e));

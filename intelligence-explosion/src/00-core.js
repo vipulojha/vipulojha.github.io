@@ -108,6 +108,7 @@ function makeRT(w, h, o = {}) {
   const rt = new THREE.WebGLRenderTarget(Math.max(2, w | 0), Math.max(2, h | 0), {
     type: o.ldr ? THREE.UnsignedByteType : HDR, depthBuffer: !!o.depth, stencilBuffer: false,
     minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, generateMipmaps: false, colorSpace: THREE.NoColorSpace,
+    samples: o.samples ? Math.min(o.samples, R.capabilities.maxSamples || 0) : 0,
   });
   if (o.depthTex) { rt.depthTexture = new THREE.DepthTexture(rt.width, rt.height); rt.depthBuffer = true; }
   return rt;
