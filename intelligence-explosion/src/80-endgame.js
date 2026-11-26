@@ -1,0 +1,165 @@
+// =====================================================================
+// 80 · ENDGAME — selectall (control), futures (two worlds, interactive),
+// questions (the close).
+// =====================================================================
+import { SCENES, THREE, clamp, lerp, E, prng, shader, pass, V, text, SelBox, AU } from './00-core.js';
+
+// ---------------------------------------------------------------- selectall
+{
+  const bg = shader(`uniform float uT,uAsp,uRed; void main(){ vec2 p=(vUv-.5)*vec2(uAsp,1.);
+  vec3 c=vec3(.012,.012,.02)+vec3(.35,.03,.02)*uRed*exp(-dot(p,p)*2.)*(.7+.3*fbm(p*3.+uT*.1));
+  c*=.92+.08*sin(vUv.y*900.); gl_FragColor=vec4(c,1.); }`, { uT: { value: 0 }, uAsp: { value: 1.78 }, uRed: { value: 0 } });
+  const sel = new SelBox();
+  const COLS = 64, ROWS = 36;
+  SCENES.push({
+    id: 'selectall', title: 'Select all', enterWith: 'dissolve', hud: { color: '#ff5a4a' },
+    beats: [{ dur: 3, hold: 2 }, { dur: 3, hold: 4 }, { dur: 4, hold: 3 }, { dur: 4, hold: 6 }],
+    bed: { chord: [0, 1, 7], oct: 2, cut: 400, vol: .06, wave: 'sawtooth', level: [.2, .3, .45, .35] },
+    notes: [
+      'Control-A. Select everything: the research, the code, the experiments, the decisions.',
+      'Anthropic says that in August its automated monitor reviewed more than a billion agent actions and blocked about one in 47,000 before they ran. Small rates times enormous volumes.',
+      'The question is not whether these systems will be capable. It is who is holding the mouse, and whether what they want is what we want.',
+      'Four problems we have to solve on a deadline: alignment, control, concentration of power, and speed. None of them are solved yet.',
+    ],
+    create(ctx, s) {
+      const rr = prng(3), blocked = new Set(); for (let i = 0; i < 40; i++) blocked.add((rr() * COLS * ROWS) | 0);
+      return {
+        update(s) {
+          s.post = { bloom: .6, threshold: .5, vignette: .5, grain: .04, ca: .002, exposure: 1.1 };
+          if (s.cross(0, .5)) AU.hit('click'); if (s.cross(0, .8)) AU.hit('click'); if (s.cross(0, 1.2)) AU.hit('select'); if (s.cross(0, 1.4)) AU.hit('riser');
+          if (s.cross(2, .3)) AU.hit('sub'); if (s.cross(3, .2)) AU.hit('boom');
+        },
+        render(slot, s) { bg.uniforms.uT.value = s.t; bg.uniforms.uAsp.value = V.W / V.H; bg.uniforms.uRed.value = s.k(0, 1.2, 3) * (s.on(3) ? 1.4 : 1); pass(bg, slot.hdr); },
+        draw2d(g, s) {
+          const W = V.W, H = V.H, k = Math.min(W / 1920, H / 1080) * (V.portrait ? 1.6 : 1);
+          // the field of work items
+          const ox = W * .06, oy = H * .08, cw = W * .88 / COLS, chh = H * .84 / ROWS, sweep = s.k(0, 1.2, 3.2, E.lin) * 1.25;
+          for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+            const i = r * COLS + c, d = Math.hypot((c - COLS / 2) / COLS, (r - ROWS / 2) / ROWS * .6);
+            const on = d < sweep, flick = .35 + .65 * Math.abs(Math.sin(s.t * (1 + (i % 7)) + i));
+            const x = ox + c * cw, y = oy + r * chh;
+            const isB = blocked.has(i) && s.on(1) && Math.sin(s.t * 2 + i) > .2;
+            g.fillStyle = isB ? '#ff3b30' : `rgba(240,240,255,${.06 + .1 * flick})`; g.fillRect(x + cw * .2, y + chh * .25, cw * .6, chh * .5);
+            if (on) { g.strokeStyle = isB ? '#ff3b30' : 'rgba(43,92,255,.85)'; g.lineWidth = 1; g.strokeRect(x + cw * .12, y + chh * .15, cw * .76, chh * .7); }
+          }
+          // Ctrl + A keycaps
+          const kp = s.k(0, .4, 1, E.outBack), out0 = s.on(1) ? clamp(s.at(1) / .5) : 0;
+          if (out0 < 1) {
+            g.globalAlpha = kp * (1 - out0);
+            const key = (x, label, down) => { const y = H / 2 - 80 * k + (down ? 10 * k : 0); g.fillStyle = '#1c1c22'; g.fillRect(x, y + 14 * k, 200 * k, 150 * k); g.fillStyle = down ? '#2a2a33' : '#33333d'; g.fillRect(x, y, 200 * k, 150 * k); g.fillStyle = '#fff'; g.font = `500 ${46 * k}px Geist, sans-serif`; g.fillText(label, x + 30 * k, y + 95 * k); };
+            key(W / 2 - 250 * k, 'Ctrl', s.at(0) > .5); key(W / 2 + 50 * k, 'A', s.at(0) > .8);
+            g.globalAlpha = 1;
+          }
+          if (s.at(0) > 1.2) sel.set({ x: ox, y: oy, w: W * .88, h: H * .84 }); else sel.hide();
+          sel.draw(g, s.dt, k);
+          const x = (V.portrait ? 60 : 120) * k, by = H * .5;
+          const shade = (yy, hh) => { const gr = g.createLinearGradient(0, yy - hh, 0, yy + hh); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(.5, 'rgba(0,0,0,.78)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, yy - hh, W, hh * 2); };
+          const out = b => s.beat > b ? clamp(s.at(b + 1) / .5) : 0;
+          if (s.beat === 1) { shade(by, 220 * k); text(g, 'Everything selected.', { x, y: by, size: (V.portrait ? 60 : 96) * k, font: 'Unbounded', weight: 300, color: '#fff', track: -.035, anim: 'rise', maxW: W - 2 * x }, s.k(1, .2, 1.4, E.lin)); text(g, 'In August, Anthropic’s monitor reviewed over a billion agent actions and blocked about 1 in 47,000.', { x, y: by + 70 * k, size: 24 * k, font: 'Geist', color: 'rgba(255,255,255,.8)', anim: 'fade', maxW: W - 2 * x }, s.k(1, 1, 2, E.lin)); }
+          if (s.beat === 2) {
+            shade(by, 240 * k);
+            text(g, 'So who’s holding\nthe mouse?', { x, y: by - 40 * k, size: (V.portrait ? 60 : 104) * k, font: 'Unbounded', weight: 300, color: '#fff', track: -.035, anim: 'rise', maxW: W - 2 * x }, s.k(2, .3, 1.6, E.lin));
+            // a cursor that moves on its own
+            const t = s.at(2), cx = W * (.62 + .2 * Math.sin(t * .9)), cy = H * (.45 + .2 * Math.sin(t * 1.3 + 1));
+            g.save(); g.translate(cx, cy); g.scale(2.2 * k, 2.2 * k); g.fillStyle = '#fff'; g.strokeStyle = '#000'; g.lineWidth = 1.2;
+            g.beginPath(); g.moveTo(0, 0); g.lineTo(0, 17); g.lineTo(4.5, 13); g.lineTo(7.5, 20); g.lineTo(10, 19); g.lineTo(7, 12); g.lineTo(13, 12); g.closePath(); g.fill(); g.stroke(); g.restore();
+          }
+          if (s.beat === 3) {
+            shade(H * .5, H * .42);
+            const L = [['Alignment.', 'Do systems far smarter than us want what we want, or only act like it while we watch?'], ['Control.', 'Once AI does most AI research, how do people keep a hand on the wheel?'], ['Power.', 'Whoever holds a superintelligence could out-lever any government in history.'], ['Speed.', 'Institutions move in years. This could move in months.']];
+            L.forEach(([h, d], i) => {
+              const y = H * .22 + i * 150 * k * (V.portrait ? 1.2 : 1), p = s.k(3, .2 + i * .35, 1.2 + i * .35, E.lin);
+              text(g, h, { x, y, size: 54 * k, font: 'Unbounded', weight: 300, color: '#ff5a4a', track: -.03, anim: 'rise' }, p);
+              text(g, d, { x, y: y + 48 * k, size: 24 * k, font: 'Geist', color: 'rgba(255,255,255,.82)', anim: 'fade', maxW: W - 2 * x }, clamp(p * 1.4 - .3));
+            });
+          }
+        },
+      };
+    },
+  });
+}
+
+// ---------------------------------------------------------------- futures
+{
+  const mat = shader(`uniform float uT,uAsp,uSplit;
+vec3 synthetic(vec2 p,float t){
+  vec3 c=mix(vec3(.0,.02,.05),vec3(.0,.12,.2),smoothstep(-.1,.3,p.y));
+  if(p.y<0.){ float z=.25/(-p.y+.001); vec2 g=vec2(p.x*z,z+t*.8); vec2 f=abs(fract(g)-.5); float l=max(1.-smoothstep(0.,.04*z,f.x),1.-smoothstep(0.,.04*z,f.y));
+    c=vec3(.0,.02,.04)+vec3(.1,.9,1.)*l*exp(-z*.12)*.8; }
+  for(int i=0;i<6;i++){ float fi=float(i); float x=(fi-2.5)*.28+sin(fi*3.)*.05; float h=.12+hash11(fi)*.35; float d=sdBox(p-vec2(x,h*.5),vec2(.035,h*.5)); c=mix(c,vec3(.01,.02,.03),1.-smoothstep(0.,.003,d)); c+=vec3(.1,.9,1.)*exp(-abs(d)*400.)*.5; }
+  c+=vec3(.2,.9,1.)*exp(-abs(p.y)*80.)*.4;
+  return c; }
+vec3 natural(vec2 p,float t){
+  vec3 sky=mix(vec3(.95,.5,.28),vec3(.22,.38,.78),smoothstep(0.,.45,p.y));
+  vec2 sp=vec2(.25,.08); float sd=length(p-sp); sky+=vec3(2.,1.3,.8)*exp(-sd*12.)*.8+vec3(20.)*smoothstep(.05,.04,sd);
+  vec3 c=sky;
+  for(int i=0;i<4;i++){ float fi=float(i); float h=-.02-fi*.08+fbm(vec2(p.x*(1.5+fi)+fi*7.,fi))*.18; if(p.y<h){ vec3 hc=mix(vec3(.55,.5,.3),vec3(.08,.18,.06),fi/3.); hc=mix(hc,sky*.6,.35/(1.+fi)); c=hc*(.85+.15*vnoise(p*80.)); } }
+  return c; }
+void main(){ vec2 p=(vUv-.5)*vec2(uAsp,1.);
+  float edge=(uSplit-.5)*uAsp+sin(p.y*14.+uT*2.)*.012;
+  float m=smoothstep(edge-.003,edge+.003,p.x);
+  vec3 c=mix(synthetic(p,uT),natural(p,uT),m);
+  c+=vec3(1.,.95,.85)*exp(-abs(p.x-edge)*220.)*.9;
+  gl_FragColor=vec4(c,1.); }`, { uT: { value: 0 }, uAsp: { value: 1.78 }, uSplit: { value: .5 } });
+  SCENES.push({
+    id: 'futures', title: 'Two futures', enterWith: 'wash', hud: { color: '#ffffff' },
+    beats: [{ dur: 2.5, hold: 6 }, { dur: 2.5, hold: 6 }],
+    bed: { chord: [0, 4, 7, 11], oct: 4, cut: 1200, vol: .04, level: [.4, .5] },
+    notes: [
+      'Same technology, two futures. Move the pointer across the screen. On one side, the world is handed over: capable, efficient, and no longer ours to steer. On the other, the same intelligence makes a world that is better for people: disease falls, poverty ends, and power stays spread out.',
+      'Which side we land on is not decided by physics. It is decided by people, by the choices labs, governments and the rest of us make in the next few years.',
+    ],
+    create(ctx, s) {
+      let split = .5, lastMove = -10, lastPx = null;
+      return {
+        update(s) {
+          if (s.mouse.px !== lastPx) { lastPx = s.mouse.px; lastMove = s.t; }
+          const target = s.t - lastMove < 3 && lastPx != null ? clamp(lastPx / V.W, .05, .95) : .5 + .3 * Math.sin(s.t * .35);
+          split += (target - split) * (1 - Math.exp(-s.dt * 4));
+          s.split = split; s.post = { bloom: .45, threshold: 1.2, vignette: .45, grain: .03, ca: .0015, exposure: .85, contrast: 1.08 };
+        },
+        render(slot, s) { mat.uniforms.uT.value = s.t; mat.uniforms.uAsp.value = V.W / V.H; mat.uniforms.uSplit.value = s.split; pass(mat, slot.hdr); },
+        draw2d(g, s) {
+          const W = V.W, H = V.H, k = Math.min(W / 1920, H / 1080) * (V.portrait ? 1.6 : 1), x = (V.portrait ? 60 : 120) * k;
+          text(g, 'Same technology.\nTwo futures.', { x: W / 2, y: H * .16, size: (V.portrait ? 54 : 84) * k, font: 'Unbounded', weight: 300, color: '#fff', align: 'center', track: -.035, anim: 'blur', by: 'word', glow: 'rgba(0,0,0,.5)' }, s.k(0, .2, 2, E.lin), s.on(1) ? clamp(s.at(1) / .5) : 0);
+          g.font = `500 ${20 * k}px "Geist Mono", monospace`; g.fillStyle = 'rgba(255,255,255,.85)';
+          const lx = s.split * W; g.textAlign = 'right'; g.fillText('HANDED OVER  ←', lx - 24 * k, H - 70 * k); g.textAlign = 'left'; g.fillText('→  FLOURISHING', lx + 24 * k, H - 70 * k);
+          if (s.on(1)) text(g, 'Which side we land on\nis decided by people.\nIn the next few years.', { x: W / 2, y: H * .16, size: (V.portrait ? 50 : 76) * k, font: 'Unbounded', weight: 300, color: '#fff', align: 'center', track: -.035, anim: 'rise', glow: 'rgba(0,0,0,.5)' }, s.k(1, .4, 2, E.lin));
+        },
+      };
+    },
+  });
+}
+
+// ---------------------------------------------------------------- questions
+{
+  const mat = shader(`uniform float uT,uAsp,uRise; void main(){ vec2 p=(vUv-.5)*vec2(uAsp,1.);
+  vec3 c=mix(vec3(.02,.02,.035),vec3(.5,.28,.18),smoothstep(.9,-.6,p.y)*uRise);
+  c+=vec3(1.,.6,.35)*exp(-length(p-vec2(0.,-.75))*2.5)*uRise*.8;
+  for(int i=0;i<18;i++){ float fi=float(i); vec2 o=vec2(sin(fi*7.3+uT*.03*(1.+hash11(fi))),cos(fi*3.1+uT*.025))*vec2(uAsp*.5,.45);
+    float r=.03+hash11(fi+3.)*.07; float d=length(p-o); c+=vec3(1.,.75,.5)*smoothstep(r,r*.7,d)*.05*(.5+.5*sin(uT*.5+fi)); }
+  gl_FragColor=vec4(c,1.); }`, { uT: { value: 0 }, uAsp: { value: 1.78 }, uRise: { value: 0 } });
+  SCENES.push({
+    id: 'questions', title: 'Questions', enterWith: 'daybreak', hud: { color: '#ffffff', alpha: .6 },
+    beats: [{ dur: 5, hold: 8 }, { dur: 2, hold: 20 }],
+    bed: { chord: [0, 4, 7, 14], oct: 3, cut: 1000, vol: .05, level: [.6, .4] },
+    notes: [
+      'If it goes well, the most precious thing it gives us back is time. So: what will you do with it?',
+      'Sources: METR time-horizon research (2025–2026); Anthropic, September 2026 report on AI-led R&D; OpenAI, September 2026 Navier–Stokes announcement (under review); Alpöge and Claude, Lean proof of the Riemann hypothesis (Nov 2026); Dario Amodei, “Machines of Loving Grace” (2024); I. J. Good (1965).',
+    ],
+    create() {
+      return {
+        update(s) { s.post = { bloom: .6, threshold: .6, vignette: .5, grain: .03, ca: .001 }; if (s.cross(0, 1.2)) AU.hit('glass'); if (s.cross(0, 3)) AU.hit('rise'); },
+        render(slot, s) { mat.uniforms.uT.value = s.t; mat.uniforms.uAsp.value = V.W / V.H; mat.uniforms.uRise.value = s.k(0, 0, 5, E.io2); pass(mat, slot.hdr); },
+        draw2d(g, s) {
+          const W = V.W, H = V.H, k = Math.min(W / 1920, H / 1080) * (V.portrait ? 1.6 : 1);
+          text(g, 'What will you do\nwith the time?', { x: W / 2, y: H * .45, size: (V.portrait ? 80 : 150) * k, font: 'Newsreader', italic: true, weight: 400, color: '#fbf6ec', align: 'center', valign: 'middle', track: -.02, lh: 1.02, anim: 'blur', by: 'word', stagger: .6 }, s.k(0, 1.2, 4.2, E.lin), s.on(1) ? clamp(s.at(1) / .8) * .0 : 0);
+          if (s.on(1)) {
+            const src = ['METR · time-horizon research, 2025–2026', 'Anthropic · AI-led R&D report, September 2026 (self-reported)', 'OpenAI · Navier–Stokes announcement, September 2026 (under review)', 'L. Alpöge with Claude · Lean proof of the Riemann hypothesis, November 2026', 'Dario Amodei · “Machines of Loving Grace”, 2024', 'I. J. Good · “Speculations Concerning the First Ultraintelligent Machine”, 1965'];
+            src.forEach((l, i) => text(g, l, { x: W / 2, y: H * .74 + i * 30 * k, size: 19 * k, font: 'Geist Mono', weight: 400, color: 'rgba(251,246,236,.6)', align: 'center', anim: 'fade' }, s.k(1, .2 + i * .15, 1 + i * .15, E.lin)));
+          }
+        },
+      };
+    },
+  });
+}

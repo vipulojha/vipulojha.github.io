@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#000000">
+<meta name="description" content="The Intelligence Explosion: a cinematic WebGL presentation on where AI is going, and how fast.">
+<title>The Intelligence Explosion</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Geist:wght@300;400;500;700;800&family=Geist+Mono:wght@400;500;700&family=JetBrains+Mono:wght@700&family=Newsreader:ital,opsz,wght@0,6..72,400;1,6..72,400;1,6..72,500&family=Silkscreen&family=Unbounded:wght@300;800&display=block" rel="stylesheet">
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js"}}</script>
+<style>
+/* VOICE: deadpan office slide that escalates into cinema
+   IDEA: a talk deck that redesigns itself, then leaves the slide
+   PICTURE: every slide is a full-screen shader scene
+   COLOUR+TYPE: one strong palette per scene; Unbounded / Geist / Newsreader
+   LAYOUT: virtual 1920-wide stage, text composited into the GL frame */
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#000;overflow:hidden;color:#fff;font-family:Geist,system-ui,sans-serif;-webkit-font-smoothing:antialiased;touch-action:none;user-select:none;-webkit-user-select:none}
+#gl{position:fixed;inset:0;width:100%;height:100%;display:block;cursor:default}
+body.idle #gl{cursor:none}
+#load{position:fixed;inset:0;display:grid;place-items:center;background:#fff;color:#444;font:22px Arial,sans-serif;z-index:20;transition:opacity .6s}
+#load .bx{width:min(420px,70vw);text-align:center}
+#load .bar{height:3px;background:#e2e2e2;margin-top:18px;overflow:hidden}
+#load .bar i{display:block;height:100%;width:0;background:#3f6fb5;transition:width .2s}
+#load.gone{opacity:0;pointer-events:none}
+#nogl{position:fixed;inset:0;display:none;place-items:center;text-align:center;padding:2rem;font:18px/1.5 Geist,Arial,sans-serif;background:#0b0b0e;z-index:30}
+.ui{position:fixed;z-index:10;transition:opacity .5s}
+body.idle .ui.auto{opacity:0;pointer-events:none}
+#bar{left:50%;bottom:18px;transform:translateX(-50%);display:flex;gap:6px;padding:6px;border-radius:14px;background:rgba(14,14,18,.55);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.1)}
+#bar button{min-width:44px;height:44px;border:0;border-radius:10px;background:transparent;color:#fff;font:500 13px "Geist Mono",monospace;cursor:pointer;padding:0 10px}
+#bar button:hover,#bar button.on{background:rgba(255,255,255,.12)}
+#bar button:focus-visible{outline:2px solid #2b5cff}
+#notes{left:0;right:0;bottom:0;padding:16px 28px 84px;background:linear-gradient(transparent,rgba(0,0,0,.86) 30%);font:17px/1.5 Geist,sans-serif;display:none}
+#notes.on{display:block}
+#notes .meta{font:500 12px "Geist Mono",monospace;opacity:.6;margin-bottom:6px;letter-spacing:.04em}
+#ov{position:fixed;inset:0;z-index:15;background:rgba(6,6,8,.94);display:none;overflow:auto;padding:48px 5vw}
+#ov.on{display:block}
+#ov h2,#help h2{font:300 28px Unbounded,sans-serif;margin-bottom:24px}
+#ov .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:18px}
+#ov button{all:unset;cursor:pointer;display:block}
+#ov button:focus-visible{outline:2px solid #2b5cff}
+#ov canvas,#ov .ph{width:100%;aspect-ratio:16/9;border-radius:8px;background:#1a1a20;display:block;border:2px solid transparent}
+#ov button.cur canvas,#ov button.cur .ph{border-color:#2b5cff}
+#ov span{display:block;font:500 12px "Geist Mono",monospace;margin-top:8px;opacity:.75}
+#help{position:fixed;inset:0;z-index:16;display:none;place-items:center;background:rgba(6,6,8,.8)}
+#help.on{display:grid}
+#help .card{background:#111116;border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:32px 36px;max-width:560px;width:90vw;font:15px/1.9 Geist,sans-serif}
+#help kbd{font:500 12px "Geist Mono",monospace;background:#24242c;border-radius:5px;padding:2px 7px;margin-right:6px}
+#black{position:fixed;inset:0;background:#000;z-index:12;display:none}
+#black.on{display:block}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+body.headless .ui{display:none!important}
+</style>
+</head>
+<body>
+<canvas id="gl" aria-label="Presentation canvas"></canvas>
+<div id="load"><div class="bx"><div>Opening presentation…</div><div class="bar"><i id="loadbar"></i></div></div></div>
+<div id="nogl"><div><p style="font:300 28px Unbounded,sans-serif;margin-bottom:12px">This deck needs WebGL 2.</p><p>Try a recent Chrome, Edge, Firefox or Safari on a device with graphics acceleration turned on.</p></div></div>
+<div id="bar" class="ui auto" role="toolbar" aria-label="Presentation controls">
+  <button id="bPrev" aria-label="Previous">←</button>
+  <button id="bOv" aria-label="Overview">O</button>
+  <button id="bNotes" aria-label="Speaker notes">N</button>
+  <button id="bAuto" aria-label="Auto-play">A</button>
+  <button id="bMute" aria-label="Mute">M</button>
+  <button id="bFs" aria-label="Fullscreen">F</button>
+  <button id="bHelp" aria-label="Help">?</button>
+  <button id="bNext" aria-label="Next">→</button>
+</div>
+<div id="notes" class="ui"><div class="meta" id="notesMeta"></div><div id="notesText"></div></div>
+<div id="ov" role="dialog" aria-label="Slide overview"><h2>Overview</h2><div class="grid" id="ovGrid"></div></div>
+<div id="help" role="dialog" aria-label="Keyboard help"><div class="card">
+  <h2>Controls</h2>
+  <div><kbd>→</kbd><kbd>Space</kbd>next &nbsp; <kbd>←</kbd>back &nbsp; click / swipe also work</div>
+  <div><kbd>Home</kbd><kbd>End</kbd>first / last slide</div>
+  <div><kbd>F</kbd>fullscreen &nbsp; <kbd>A</kbd>auto-play &nbsp; <kbd>M</kbd>mute</div>
+  <div><kbd>N</kbd>speaker notes &nbsp; <kbd>P</kbd>notes window &nbsp; <kbd>O</kbd>overview</div>
+  <div><kbd>B</kbd>or <kbd>.</kbd>black screen &nbsp; <kbd>Esc</kbd>close panels</div>
+  <div style="margin-top:14px;opacity:.6">Sound is made live in your browser. Press M to mute.</div>
+</div></div>
+<div id="black"></div>
+<div class="sr" aria-live="polite" id="live"></div>
+<script type="module">
+%%SCRIPT%%
+</script>
+</body>
+</html>
