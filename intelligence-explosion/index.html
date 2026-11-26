@@ -44,6 +44,7 @@ body.idle .ui.auto{opacity:0;pointer-events:none}
 #bar button{min-width:44px;height:44px;border:0;border-radius:10px;background:transparent;color:#fff;font:500 13px "Geist Mono",monospace;cursor:pointer;padding:0 10px}
 #bar button:hover,#bar button.on{background:rgba(255,255,255,.12)}
 #bar button:focus-visible{outline:2px solid #2b5cff}
+@media (max-width:700px){#bar{bottom:auto;top:10px;gap:2px;padding:4px;transform:translateX(-50%) scale(.9)}#bar button{min-width:34px;height:38px;padding:0 6px;font-size:12px}}
 #notes{left:0;right:0;bottom:0;padding:16px 28px 84px;background:linear-gradient(transparent,rgba(0,0,0,.86) 30%);font:17px/1.5 Geist,sans-serif;display:none}
 #notes.on{display:block}
 #notes .meta{font:500 12px "Geist Mono",monospace;opacity:.6;margin-bottom:6px;letter-spacing:.04em}
@@ -847,7 +848,7 @@ const TRANSITIONS = T;
     notes: [
       'Lights down. One point of light, so dense it bends the stars behind it.',
       'Then it goes. Everything that follows in this talk is what happens after that moment.',
-      'But first, the way these talks usually start.',
+      'So let\'s start with the people whose job is to see it coming.',
     ],
     create(ctx, s) {
       scene3 = new THREE.Scene(); cam = new THREE.PerspectiveCamera(42, 1.78, .01, 100);
@@ -937,20 +938,17 @@ void main(){ vec2 p=(vUv-.5)*vec2(uAsp,1.); float r=length(p);
           if (s.on(1) && !s.on(2)) {
             text(g, 'What happens when minds start building better minds.', { x: W / 2, y: H * (V.portrait ? .76 : .86), size: (V.portrait ? 30 : 30) * k, font: 'Newsreader', italic: true, color: '#f2ecff', align: 'center', anim: 'blur', by: 'word', maxW: W * .86 }, s.k(1, 6.8, 9, E.lin));
           }
-          if (s.on(2)) text(g, 'But first, a slide.', { x: W / 2, y: H * .52, size: (V.portrait ? 46 : 64) * k, font: 'Unbounded', weight: 300, color: '#fff', align: 'center', valign: 'middle', track: -.03, anim: 'glitch' }, s.k(2, .9, 1.6, E.lin), s.k(2, 2.1, 2.5, E.lin));
+          if (s.on(2)) text(g, 'How close is it?', { x: W / 2, y: H * .52, size: (V.portrait ? 46 : 64) * k, font: 'Unbounded', weight: 300, color: '#fff', align: 'center', valign: 'middle', track: -.03, anim: 'glitch' }, s.k(2, .9, 1.6, E.lin), s.k(2, 2.1, 2.5, E.lin));
         },
       };
     },
   });
 }
 
-// ---- 10-office.js ----
+// ---- 12-metr.js ----
 // =====================================================================
-// 10 · OFFICE — "The Future of AI". A deliberately bad PowerPoint that
-// edits itself, then redesigns one word nine times, then hands off to
-// the real chart.
+// 12 · METR data shared by the tower scene.
 // =====================================================================
-
 // METR 50%-success time horizons (hours). Approximate, from METR's published
 // figures (TH1/TH1.1). Opus 4.6 uses the corrected ~12 h estimate; Mythos
 // Preview is the 17.4 h early estimate (95% CI 8.5–55 h).
@@ -961,339 +959,121 @@ const METR = [
   { y: 2025.6, h: 2.3, n: 'GPT-5' }, { y: 2025.9, h: 4.8, n: 'Claude Opus 4.5', lab: 'Opus 4.5 · 4.8 hours' },
   { y: 2026.1, h: 12, n: 'Claude Opus 4.6', lab: 'Opus 4.6 · ~12 hours' }, { y: 2026.3, h: 17.4, n: 'Claude Mythos Preview', lab: 'Mythos Preview · ~17 hours' },
 ];
-function drawMetrCard(c) {
-  const g = c.getContext('2d'), W = c.width, H = c.height;
-  g.fillStyle = '#fbfaf7'; g.fillRect(0, 0, W, H);
-  const L = 150, Rr = W - 80, T = 190, B = H - 130;
-  g.fillStyle = '#111'; g.font = '600 46px Geist, Arial'; g.fillText('How long a task can AI finish on its own?', L - 40, 92);
-  g.fillStyle = '#6b6b6b'; g.font = '400 26px Geist, Arial'; g.fillText('Task length (human time) at 50% success · METR', L - 40, 136);
-  const X = y => L + (y - 2019) / (2026.6 - 2019) * (Rr - L), Y = h => B - h / 18 * (B - T);
-  g.strokeStyle = '#e3e0d8'; g.lineWidth = 2; g.font = '400 22px "Geist Mono", monospace'; g.fillStyle = '#8a8a8a';
-  for (let h = 0; h <= 18; h += 3) { g.beginPath(); g.moveTo(L, Y(h)); g.lineTo(Rr, Y(h)); g.stroke(); g.textAlign = 'right'; g.fillText(h + ' h', L - 14, Y(h) + 7); }
-  g.textAlign = 'center'; for (let y = 2019; y <= 2026; y++) g.fillText(y, X(y), B + 40);
-  g.strokeStyle = '#d4331a'; g.lineWidth = 6; g.lineJoin = 'round'; g.beginPath(); METR.forEach((d, i) => i ? g.lineTo(X(d.y), Y(d.h)) : g.moveTo(X(d.y), Y(d.h))); g.stroke();
-  METR.forEach(d => { g.beginPath(); g.arc(X(d.y), Y(d.h), 7, 0, 7); g.fillStyle = '#d4331a'; g.fill(); });
-  g.textAlign = 'right'; g.fillStyle = '#111'; g.font = '500 24px Geist, Arial';
-  [[METR[3], 'GPT-4 · 5 min'], [METR[10], 'Opus 4.5 · 4.8 h'], [METR[11], 'Opus 4.6 · ~12 h'], [METR[12], 'Mythos Preview · ~17 h']].forEach(([d, l]) => g.fillText(l, X(d.y) - 16, Y(d.h) - 14));
-  g.textAlign = 'left'; g.fillStyle = '#9a9a9a'; g.font = '400 19px Geist, Arial'; g.fillText('Approximate values. Later estimates have wide error bars.', L - 40, H - 40);
-}
+
+// ---- 15-forecast.js ----
+// =====================================================================
+// 15 · FORECAST — "The horizon is collapsing." A flight down an endless
+// neon timeline. Each year is a rung; each decade a glowing gate. The
+// forecasts are beacons on the road ahead, and they keep sliding toward us.
+// One pinhole camera model is shared by the shader and the 2D labels.
+// =====================================================================
 
 {
-  const sel = new SelBox();
-  const RED = 11.6, VD = 1.7, WIPE = .45, NV = 10, X3 = 8, CONF = 9, CARD = RED + 9 * VD + 2.7;
-  const BG = ['#ffffff', '#f1f2f2', '#cfe0ee', '#ffd21f', '#8fe0b8', '#2347d9', '#ff9db8', '#c9a58c', '#f27a3a', '#b8c9e0'];
-  const HUDC = ['#111111', '#e51e16', '#0b2346', '#111111', '#0a3d2a', '#ffffff', '#3a0d1c', '#ffffff', '#3a1206', '#1c2b45'];
-  const WIPES = [null, 'circle', 'diagonal', 'bars', 'pixels', 'columns', 'wavy', 'ring', 'gl', 'gl'];
-  let ext, initGL3D = null, chart, chrome, pts, ptsMat, cam, scene3, maskTex, blurTex, prevTitleN = -1, prevBul = 5, lastVar = -1;
-  const u = () => Math.min(V.W / 1920, V.H / 1080) * (V.portrait ? 1.7 : 1);
-
-  function wipePath(g, kind, e, i) {
-    const W = V.W, H = V.H; g.beginPath();
-    switch (kind) {
-      case 'circle': g.arc(W * .72, H * .5, Math.hypot(W, H) * E.in2(e), 0, 7); break;
-      case 'diagonal': { const x = lerp(-H, W + H, E.io3(e)); g.moveTo(-10, -10); g.lineTo(x, -10); g.lineTo(x - H, H + 10); g.lineTo(-10, H + 10); break; }
-      case 'bars': { const n = 9; for (let k = 0; k < n; k++) { const ek = clamp(e * 1.6 - k / n * .6); g.rect(0, k * H / n, W * E.out3(ek), H / n + 1); } break; }
-      case 'pixels': { const n = 24, cs = W / n, rr = prng(7); for (let y = 0; y < H / cs + 1; y++) for (let x = 0; x < n; x++) if (rr() < e * 1.05) g.rect(x * cs, y * cs, cs + 1, cs + 1); break; }
-      case 'columns': { const n = 12; for (let k = 0; k < n; k++) { const ek = E.out3(clamp(e * 1.7 - k / n * .7)); const cw = W / n; g.rect(k * cw + cw / 2 * (1 - ek), 0, cw * ek + 1, H); } break; }
-      case 'wavy': { const x0 = lerp(-60, W + 60, E.io3(e)); g.moveTo(-10, -10); for (let y = -10; y <= H + 10; y += 20) g.lineTo(x0 + Math.sin(y * .012 + e * 9) * 50, y); g.lineTo(-10, H + 10); break; }
-      case 'ring': { const r = Math.hypot(W, H) * .6 * E.in2(e); g.arc(W / 2, H / 2, r, 0, 7); break; }
-    }
-  }
-  // ---------- the nine redesigns ----------
-  function variant(g, i, tt) {
-    const W = V.W, H = V.H, k = u();
-    g.fillStyle = BG[i]; if (i < 7) g.fillRect(0, 0, W, H);
-    const big = Math.min(W * .9, H * 1.4);
-    switch (i) {
-      case 0: { // white, grid lines draw in
-        g.strokeStyle = '#e6e6e6'; g.lineWidth = 1.5;
-        for (let c = 0; c < 13; c++) { const e = E.out3(clamp(tt * 2.2 - c * .05)); const x = (c + .5) / 13 * W; g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H * e); g.stroke(); }
-        for (let r = 0; r < 8; r++) { const e = E.out3(clamp(tt * 2.2 - .3 - r * .05)); const y = (r + .5) / 8 * H; g.beginPath(); g.moveTo(0, y); g.lineTo(W * e, y); g.stroke(); }
-        return text(g, 'I can fix it.', { x: W / 2, y: H / 2, size: big * .12, font: 'Geist', weight: 700, align: 'center', valign: 'middle', color: '#111', track: -.04, anim: 'rise' }, clamp(tt * 2));
-      }
-      case 1: { // red disc drifting in from the right
-        const x = lerp(W * 1.35, W * .74, E.out4(clamp(tt / 1.4)));
-        g.fillStyle = '#e51e16'; g.beginPath(); g.arc(x, H * .48, H * .42, 0, 7); g.fill();
-        return text(g, 'Better.', { x: W * .1, y: H * .58, size: big * .22, font: 'Geist', weight: 800, color: '#111', track: -.05, anim: 'blur', by: 'glyph' }, clamp(tt * 1.8));
-      }
-      case 2: { // Newsreader italic, letters rise skewed + rotating, four rules
-        g.strokeStyle = 'rgba(11,35,70,.35)'; g.lineWidth = 1.5;
-        [.2, .32, .74, .86].forEach((yy, j) => { const e = E.out3(clamp(tt * 1.8 - j * .1)); g.beginPath(); g.moveTo(W * .06, H * yy); g.lineTo(W * (.06 + .88 * e), H * yy); g.stroke(); });
-        return text(g, 'Better.', { x: W / 2, y: H * .66, size: big * .3, font: 'Newsreader', italic: true, weight: 400, align: 'center', color: '#0b2346', track: -.03, anim: 'fade', stagger: .5,
-          fn: (gg, e) => ({ dy: (1 - e) * big * .2, r: (1 - e) * -.5, sk: (1 - e) * .5 }) }, clamp(tt * 1.6));
-      }
-      case 3: { // Anton, stretched to fill the width, sine-modulated, alternate drop
-        const word = 'BETTER', n = word.length; const ws = []; let sum = 0;
-        for (let j = 0; j < n; j++) { const w = 1 + .38 * Math.sin(tt * 3.2 + j * 1.3); ws.push(w); sum += w; }
-        const total = W * .94; let x = W * .03; const size = 200; g.font = `400 ${size}px Anton, Impact, sans-serif`; g.fillStyle = '#111';
-        for (let j = 0; j < n; j++) {
-          const cw = ws[j] / sum * total, mw = g.measureText(word[j]).width, e = E.outBack(clamp(tt * 2.6 - j * .12));
-          const dir = j % 2 ? -1 : 1, oy = (1 - e) * H * 1.1 * dir;
-          g.save(); g.translate(x, H * .9 + oy); g.scale(cw / mw, H * .82 / (size * .74)); g.fillText(word[j], 0, 0); g.restore(); x += cw;
-        }
-        return { x: W * .03, y: H * .08, w: total, h: H * .82 };
-      }
-      case 4: { // pixel font, stepped at 14 fps, snapping blocks scroll
-        const ts = Math.floor(tt * 14) / 14; g.fillStyle = '#0a3d2a';
-        const bs = H / 18; for (let c = -1; c < W / bs + 2; c++) { const off = (Math.floor(ts * 14) % 4) * bs / 4 * 4; if ((c + Math.floor(ts * 14 / 4)) % 3 === 0) g.fillRect(c * bs - off % bs, H - bs * 1.6, bs * .8, bs * .8); }
-        return text(g, 'better.', { x: W / 2, y: H * .56, size: big * .17, font: 'Silkscreen', weight: 400, align: 'center', valign: 'middle', color: '#0a3d2a', anim: 'fade', stagger: .7, ease: x => x > 0 ? 1 : 0,
-          fn: (gg, e) => ({ dy: Math.round(Math.sin(ts * 9 + gg.gi) * 3) * 6 }) }, clamp(ts * 2.4));
-      }
-      case 5: { // blue, 19 lines of mono with a radial wave, a giant "better" drops on top
-        const rows = 19, rh = H / rows, fs = rh * .78; g.font = `700 ${fs}px "JetBrains Mono", monospace`; g.fillStyle = 'rgba(255,255,255,.55)';
-        const cw = g.measureText('m').width, line = 'better than ';
-        for (let r = 0; r < rows; r++) for (let c = 0; c * cw < W + cw; c++) {
-          const ch = line[(c + r * 3) % line.length]; const x = c * cw + cw / 2, y = (r + .5) * rh;
-          const d = Math.hypot(x - W / 2, (y - H / 2) * 1.4) / W; const s = 1 + .55 * Math.max(0, Math.sin(d * 18 - tt * 7));
-          g.save(); g.translate(x, y + fs * .35); g.scale(s, s); g.fillText(ch, -cw / 2, 0); g.restore();
-        }
-        return text(g, 'better', { x: W / 2, y: H * .6, size: big * .26, font: 'Geist', weight: 800, align: 'center', valign: 'middle', color: '#fff', track: -.05, anim: 'drop', alt: true, stagger: .35 }, clamp(tt * 1.7));
-      }
-      case 6: { // pink, ten concentric rings of "better", counter-rotating
-        const cx = W / 2, cy = H / 2, R0 = Math.min(W, H) * .07, rs = Math.max(W, H) * .062;
-        for (let ring = 0; ring < 10; ring++) {
-          const r = R0 + ring * rs * (1 + ring * .06), fs = rs * .62, dir = ring % 2 ? 1 : -1;
-          g.font = `800 ${fs}px Unbounded, sans-serif`; g.fillStyle = ring % 2 ? '#3a0d1c' : '#fff4e4';
-          const word = 'better · ', ww = g.measureText(word).width, reps = Math.max(1, Math.floor(2 * Math.PI * r / ww));
-          const str = word.repeat(reps); let a = tt * .5 * dir / (1 + ring * .3) + ring;
-          const grow = E.out3(clamp(tt * 2.2 - ring * .07)); if (grow <= 0) continue;
-          for (const ch of str) { const cw = g.measureText(ch).width; const ang = a + cw / 2 / r; g.save(); g.translate(cx + Math.cos(ang) * r * grow, cy + Math.sin(ang) * r * grow); g.rotate(ang + Math.PI / 2); g.fillText(ch, -cw / 2, fs * .35); g.restore(); a += cw / r; }
-        }
-        return { x: cx - R0 * 2.2, y: cy - R0 * 2.2, w: R0 * 4.4, h: R0 * 4.4 };
-      }
-    }
-    // GL variants: just report the word box for the selection frame
-    const ww = Math.min(W * .86, H * 1.72), hh = ww / 2 * .62;
-    return { x: (W - ww) / 2, y: H / 2 - hh / 2, w: ww, h: hh };
-  }
-
-  SCENES.push({
-    id: 'office', title: 'The Future of AI', enterWith: 'glitch', hud: { font: 'arial', color: '#7f7f7f', alpha: 1 },
-    beats: [{ dur: .6, hold: 3, page: '1' }, { dur: 2.4, hold: 4, page: '2' }, { dur: 33, hold: 2, page: '2' }],
-    notes: [
-      'Here is a presentation about the future of AI. It looks like every presentation about the future of AI.',
-      'An agenda. Some bullets. A chart called "projected". Do not touch anything for the next half minute. Let the deck work.',
-      'The deck rewrites itself: deletes the agenda, fixes the chart, and redesigns one word nine times in about fifteen seconds. That speed is the point. Then it lands on the one chart that matters.',
-    ],
-    create(ctx, s) {
-      chart = document.createElement('canvas'); chart.width = 1600; chart.height = 900;
-      // GL: liquid chrome word + paper confetti word
-      const sharp = wordCanvas('Better.', '800 %spx Geist, Arial', 1024, 512), soft = wordCanvas('Better.', '800 %spx Geist, Arial', 1024, 512, 14);
-      maskTex = new THREE.CanvasTexture(sharp); blurTex = new THREE.CanvasTexture(soft);
-      chrome = shader(`uniform sampler2D tMask,tBlur; uniform float uAsp,uT,uFade; uniform vec3 uBg,uBg2;
-vec3 env(vec3 r){ float y=r.y;
-  vec3 c=mix(vec3(.06,.04,.035),vec3(1.4,.72,.4),smoothstep(-.45,.05,y));
-  c=mix(c,vec3(.28,.42,1.1),smoothstep(.12,.85,y));
-  c+=vec3(2.,1.2,.7)*exp(-pow((y-.02)*9.,2.));
-  c+=vec3(6.)*smoothstep(.025,0.,abs(y-.36+.08*sin(r.x*3.+uT*.8)));
-  return c; }
+  const H0 = 1.15, F = 1.25, PITCH = .02; // camera height, focal length (in screen heights), downward pitch
+  const zOf = y => -(y - 2025) * 2.6;      // one year = 1.6 units down the road
+  const mat = shader(`uniform float uT,uAsp,uCamZ,uM,uS,uMtrail,uStrail,uSon,uWarp;
+const float H0=${H0.toFixed(3)}, F=${F.toFixed(3)}, PITCH=${PITCH.toFixed(3)};
+float zOf(float y){ return -(y-2025.)*2.6; }
+vec3 beacon(vec3 ro,vec3 rd,vec3 c,float r,vec3 col){ vec3 v=c-ro; float tp=max(dot(v,rd),0.); float d=length(v-rd*tp); return col*(exp(-d*d/(r*r))*5.+.0006/(d*d+.0006)); }
 void main(){
   vec2 p=(vUv-.5)*vec2(uAsp,1.);
-  float ww=min(uAsp*.86,1.72); vec2 wuv=p/vec2(ww,ww*.5)+.5;
-  vec2 rip=vec2(fbm(wuv*5.+uT*.7),fbm(wuv*5.-uT*.6+3.))-.5;
-  vec2 q=wuv+rip*.012;
-  float m=texture(tMask,q).r, hb=texture(tBlur,q).r;
-  vec2 e=vec2(1./512.,0.);
-  float hx=texture(tBlur,q+e.xy).r-texture(tBlur,q-e.xy).r, hy=texture(tBlur,q+e.yx).r-texture(tBlur,q-e.yx).r;
-  vec3 n=normalize(vec3(-hx*9.+rip.x*.6,-hy*9.+rip.y*.6,1.));
-  vec3 r=reflect(vec3(0.,0.,-1.),n);
-  float fres=pow(1.-n.z,2.);
-  vec3 chromeC=env(r)*(.6+.6*fres);
-  float sh=texture(tBlur,wuv+vec2(-.012,.03)).r;
-  vec3 bg=mix(uBg,uBg2,uFade)*(1.-sh*.35*(1.-uFade));
-  float inside=smoothstep(.42,.58,m)*(1.-uFade);
-  gl_FragColor=vec4(mix(bg,chromeC,inside),1.); }`,
-        { tMask: { value: maskTex }, tBlur: { value: blurTex }, uAsp: { value: 1.78 }, uT: { value: 0 }, uFade: { value: 0 }, uBg: { value: new THREE.Color('#c9a58c') }, uBg2: { value: new THREE.Color('#b8c9e0') } });
-      chrome.uniforms.uBg.value.convertSRGBToLinear(); chrome.uniforms.uBg2.value.convertSRGBToLinear();
-      // extruded, height-waved 3D word, ray-marched against the blurred mask (approximate SDF), soft shadows + AO
-      ext = shader(`uniform sampler2D tBlur; uniform float uAsp,uT,uReveal,uFade; uniform vec3 uBg2,uFloor,uRed;
-float word(vec3 p){ vec2 uv=vec2(p.x/2.3+.5,p.y/1.15+.5); float m=(uv.x>0.&&uv.x<1.&&uv.y>0.&&uv.y<1.)?texture(tBlur,uv).r:0.;
-  float d2=max((.5-m)*.045,sdBox(p.xy,vec2(1.15,.575))); float wave=sin(p.x*3.5+uT*2.2)*.06+sin(p.x*7.-uT*3.)*.02; return max(d2,abs(p.z-wave)-.11); }
-float map(vec3 p){ return min(word(p),p.y+.3); }
-vec3 nrm(vec3 p){ vec2 e=vec2(.004,0.); return normalize(vec3(map(p+e.xyy)-map(p-e.xyy),map(p+e.yxy)-map(p-e.yxy),map(p+e.yyx)-map(p-e.yyx))); }
-float shadow(vec3 ro,vec3 rd){ float r=1.,t=.02; for(int i=0;i<32;i++){ float h=map(ro+rd*t); r=min(r,10.*h/t); t+=clamp(h,.01,.15); if(r<.01||t>4.) break; } return clamp(r,0.,1.); }
-float ao(vec3 p,vec3 n){ float o=0.,w=1.; for(int i=1;i<=5;i++){ float h=.03*float(i); o+=(h-map(p+n*h))*w; w*=.6; } return clamp(1.-o*3.,0.,1.); }
-void main(){
-  vec2 q=(vUv-.5)*vec2(uAsp,1.);
-  float a=-.55+.45*sin(uT*.45); vec3 ro=vec3(sin(a)*3.1,.55+.2*sin(uT*.3),cos(a)*3.1); vec3 ta=vec3(0.,.02,0.);
-  vec3 f=normalize(ta-ro), r=normalize(cross(f,vec3(0,1,0))), u=cross(r,f);
-  vec3 rd=normalize(f*1.9*min(1.,uAsp/1.5)+r*q.x+u*q.y);
-  float t=0.; bool hit=false;
-  for(int i=0;i<140;i++){ float d=map(ro+rd*t); if(d<.0015){hit=true;break;} t+=d*.9; if(t>12.) break; }
-  vec3 bg=mix(uFloor*1.15,uFloor*.55,smoothstep(-.2,.6,q.y));
-  vec3 col=bg;
-  if(hit){ vec3 p=ro+rd*t, n=nrm(p); vec3 L=normalize(vec3(-.5,.8,.45));
-    float isF=step(p.y+.3,.003);
-    vec3 alb=mix(uRed,uFloor,isF);
-    float dif=max(dot(n,L),0.)*shadow(p+n*.005,L), oc=ao(p,n);
-    float spec=pow(max(dot(reflect(-L,n),-rd),0.),40.)*(1.-isF);
-    col=alb*(dif*vec3(1.25,1.,.85)*1.6+vec3(.35,.3,.4)*oc*.9)+spec*vec3(1.6,1.3,1.)+alb*.25*max(n.y,0.)*oc;
-    col=mix(col,bg,1.-exp(-t*t*.012));
+  vec3 rc=normalize(vec3(p,-F));
+  vec3 rd=vec3(rc.x, rc.y*cos(PITCH)+rc.z*sin(PITCH), -rc.y*sin(PITCH)+rc.z*cos(PITCH));
+  vec3 ro=vec3(0.,H0,uCamZ);
+  // sky: deep blue to magenta horizon, stars, a huge low sun-disc of "the future"
+  float hy=rd.y;
+  vec3 col=mix(vec3(.55,.08,.35),vec3(.02,.02,.08),smoothstep(-.02,.3,hy));
+  col=mix(col,vec3(.004,.004,.02),smoothstep(.3,.9,hy));
+  vec2 sp=vec2(atan(rd.x,-rd.z),hy); float sd=length((sp-vec2(0.,.06))*vec2(1.,1.));
+  float disc=smoothstep(.22,.215,sd);
+  float bands=step(.5,fract((sp.y-.06)*38.-uT*.3))+step(.1,sp.y-.06+.0);
+  col+=disc*mix(vec3(1.,.3,.55),vec3(1.,.8,.35),smoothstep(-.1,.25,sp.y))*.9*clamp(bands,0.,1.);
+  col+=vec3(1.,.3,.6)*exp(-sd*5.)*.35;
+  vec3 q=rd*300.; float h=hash13(floor(q)); col+=vec3(.9,.9,1.)*step(.997,h)*smoothstep(.5,0.,length(fract(q)-.5))*smoothstep(.05,.3,hy);
+  float tHit=1e9;
+  if(rd.y<0.){
+    float t=-ro.y/rd.y; tHit=t; vec3 P=ro+rd*t;
+    float year=2025.-P.z/2.6;
+    float fw=fwidth(year);
+    float rung=1.-smoothstep(0.,fw*1.5,abs(fract(year)-.5)*2.-1.+fw*1.5);
+    rung=smoothstep(1.-fw*2.,1.,1.-abs(fract(year+.5)-.5)*2.)*0.;
+    float lineY=(1.-smoothstep(0.,fw*1.3,.5-abs(fract(year)-.5)))*clamp(1.-fw*1.5,0.,1.);
+    float fwd=fwidth(year/10.); float dec=(1.-smoothstep(0.,fwd*1.6,.5-abs(fract(year/10.)-.5)))*clamp(1.-fwd*3.,0.,1.);
+    float xl=abs(P.x); float rails=exp(-pow((xl-2.2)*14.,2.))+exp(-pow(xl*30.,2.))*.5;
+    float fwx=fwidth(P.x/1.1); float lanes=(1.-smoothstep(0.,fwx*1.3,.5-abs(fract(P.x/1.1)-.5)))*clamp(1.-fwx*2.,0.,1.);
+    vec3 g=vec3(.01,.008,.03);
+    g+=vec3(.15,.85,1.)*lineY*.35*smoothstep(3.,0.,xl-2.2) + vec3(1.,.4,.8)*dec*.9*smoothstep(4.,0.,xl-2.)+vec3(.2,.5,1.)*lanes*.12;
+    g+=vec3(.25,.9,1.)*rails*1.4;
+    // the past glows warm behind the beacons' trails
+    float tr1=uMtrail>0.?smoothstep(.25,0.,abs(P.x+1.1))*step(zOf(2033.+ (uM-2033.)) ,P.z)*step(P.z,zOf(uMtrail))*0.:0.;
+    // reflections of the sky
+    vec3 rr=reflect(rd,vec3(0.,1.,0.)); vec2 rsp=vec2(atan(rr.x,-rr.z),rr.y); float rsd=length(rsp-vec2(0.,.06));
+    g+=vec3(1.,.35,.6)*exp(-rsd*4.)*.12;
+    float fog=1.-exp(-t*.012);
+    col=mix(g,vec3(.2,.04,.16),fog*.9);
   }
-  col=mix(col,uBg2,uFade);
-  float rv=step(length(q),uReveal*1.3);
-  gl_FragColor=vec4(col,rv); }`, { tBlur: { value: blurTex }, uAsp: { value: 1.78 }, uT: { value: 0 }, uReveal: { value: 0 }, uFade: { value: 0 },
-        uBg2: { value: new THREE.Color('#b8c9e0').convertSRGBToLinear() }, uFloor: { value: new THREE.Color('#f27a3a').convertSRGBToLinear() }, uRed: { value: new THREE.Color('#c92a14').convertSRGBToLinear() } }, { blend: true });
-      // confetti: ~7000 paper pieces fly in from depth to form the word
-      const N = 7000, P = samplePoints(sharp, N, 3), rr = prng(11);
-      const aT = new Float32Array(N * 3), aS = new Float32Array(N * 3), aSeed = new Float32Array(N);
-      for (let i = 0; i < N; i++) {
-        aT.set([P[i][0] * 3.4, P[i][1] * 1.7, (rr() - .5) * .04], i * 3);
-        const a = rr() * 6.283, rad = 1.5 + rr() * 4; aS.set([Math.cos(a) * rad, Math.sin(a) * rad * .7, -8 - rr() * 30], i * 3); aSeed[i] = rr();
-      }
-      const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(aT, 3)); geo.setAttribute('aS', new THREE.BufferAttribute(aS, 3)); geo.setAttribute('aSeed', new THREE.BufferAttribute(aSeed, 1));
-      ptsMat = shader(`varying float vR; varying float vShade; varying float vSeed;
-void main(){ vec2 c=gl_PointCoord-.5; c=rot(vR)*c; if(abs(c.x)>.42||abs(c.y)>.27) discard;
-  vec3 paper=mix(vec3(.96,.94,.9),vec3(.9,.42,.45),step(.93,vSeed)); paper=mix(paper,vec3(.25,.4,.85),step(.97,vSeed));
-  gl_FragColor=vec4(toLin(paper)*vShade,1.); }`,
-        { uP: { value: 0 }, uScatter: { value: 0 }, uTime: { value: 0 }, uSize: { value: 30 } },
-        { depth: true, vert: `attribute vec3 aS; attribute float aSeed; uniform float uP,uScatter,uTime,uSize; varying float vR; varying float vShade; varying float vSeed; varying vec2 vUv;
-void main(){ float k=clamp((uP-aSeed*.45)/.55,0.,1.); k=1.-pow(1.-k,3.);
-  vec3 p=mix(aS,position,k);
-  p+=(1.-k)*vec3(sin(uTime*2.+aSeed*40.),cos(uTime*1.7+aSeed*30.),0.)*.25;
-  vec3 dir=normalize(vec3(position.xy*1.2+vec2(sin(aSeed*91.),cos(aSeed*53.))*.6,1.));
-  p+=dir*uScatter*(1.5+aSeed*5.);
-  vec4 mv=modelViewMatrix*vec4(p,1.); gl_Position=projectionMatrix*mv; gl_PointSize=uSize/-mv.z;
-  vR=aSeed*30.+uTime*(1.+aSeed*3.)*(1.-k*.9)+uScatter*aSeed*8.; vShade=.55+.45*abs(cos(vR*1.3+aSeed*5.)); vSeed=aSeed; vUv=vec2(0.); }` });
-      pts = new THREE.Points(geo, ptsMat); pts.frustumCulled = false;
-      scene3 = new THREE.Scene(); scene3.add(pts); cam = new THREE.PerspectiveCamera(36, 1.78, .1, 100);
+  // decade gates: glowing arches standing over the road
+  for(int i=0;i<7;i++){ float yr=2030.+float(i)*10.; float z=zOf(yr); float t=(z-ro.z)/rd.z; if(t<=0.||t>tHit) continue;
+    vec3 P=ro+rd*t; float a=abs(length(vec2(P.x,P.y*1.15))-2.35); float fade=exp(-t*.02);
+    col+=vec3(1.,.35,.75)*(exp(-a*a*900.)*1.6+exp(-a*14.)*.12)*step(0.,P.y)*fade; }
+  // the forecasts: cyan = Metaculus community, amber = expert survey
+  col+=beacon(ro,rd,vec3(-1.5,.95,zOf(uM)),.12,vec3(.3,.95,1.));
+  col+=beacon(ro,rd,vec3(1.5,.95,zOf(uS)),.12,vec3(1.,.7,.25))*uSon;
+  // comet trails along the road behind each beacon
+  for(int k=0;k<2;k++){ float x=k==0?-1.5:1.5; float y0=k==0?uMtrail:uStrail; float y1=k==0?uM:uS; vec3 c=k==0?vec3(.3,.95,1.):vec3(1.,.7,.25)*uSon;
+    if(y0<=y1) continue;
+    for(int s=0;s<24;s++){ float f=float(s)/23.; float yr=mix(y1,y0,f); vec3 C=vec3(x,.95,zOf(yr)); vec3 v=C-ro; float tp=max(dot(v,rd),0.); float d=length(v-rd*tp);
+      col+=c*exp(-d*d/(.0016+f*.004))*(1.-f)*.35; } }
+  col*=1.+uWarp*.6;
+  gl_FragColor=vec4(col,1.); }`, { uT: { value: 0 }, uAsp: { value: 1.78 }, uCamZ: { value: 0 }, uM: { value: 2070 }, uS: { value: 2060 }, uMtrail: { value: 2070 }, uStrail: { value: 2060 }, uSon: { value: 0 }, uWarp: { value: 0 } });
+  // same camera in JS for labels
+  function proj(x, y, z, camZ) {
+    const vx = x, vy = y - H0, vz = z - camZ;
+    const yc = vy * Math.cos(PITCH) - vz * Math.sin(PITCH), zc = vy * Math.sin(PITCH) + vz * Math.cos(PITCH);
+    if (zc > -.05) return null;
+    const px = vx / -zc * F, py = yc / -zc * F;
+    return { x: V.W / 2 + px * V.H, y: V.H / 2 - py * V.H, d: -zc };
+  }
+  SCENES.push({
+    id: 'forecast', title: 'The horizon is collapsing', enterWith: 'kaleido', hud: { color: '#ff9fd0' },
+    beats: [{ dur: 3, hold: 4 }, { dur: 3.5, hold: 4 }, { dur: 3.5, hold: 4 }, { dur: 3, hold: 2 }],
+    bed: { chord: [0, 5, 9, 12], oct: 3, cut: 900, vol: .05, level: [.35, .45, .55, .7] },
+    notes: [
+      'In 2020, the forecasting community on Metaculus put the arrival of general AI about fifty years away: around 2070.',
+      'By February 2026, the same community\'s median was 2033. The beacon has been sliding down the road toward us.',
+      'Experts moved too. In AI Impacts\' 2022 survey of thousands of AI researchers, the 50% date for machines beating humans at every task was about 2060. One year later, in the 2023 survey, it was 2047: thirteen years closer in twelve months.',
+      'The horizon is not standing still. It is coming toward us. So what are the forecasters seeing?',
+    ],
+    create() {
       return {
-        init() {
-          drawMetrCard(chart);
-          // fonts are loaded now: rebuild the word masks + confetti targets with the real typeface
-          const s2 = wordCanvas('Better.', '800 %spx Geist, Arial', 1024, 512), b2 = wordCanvas('Better.', '800 %spx Geist, Arial', 1024, 512, 14);
-          maskTex.image = s2; maskTex.needsUpdate = true; blurTex.image = b2; blurTex.needsUpdate = true;
-          const P2 = samplePoints(s2, N, 3), at = geo.attributes.position;
-          for (let i = 0; i < N; i++) at.setXY(i, P2[i][0] * 3.4, P2[i][1] * 1.7);
-          at.needsUpdate = true; initGL3D && initGL3D(s2, b2);
-        },
-        enter() { prevTitleN = -1; prevBul = 5; lastVar = -1; sel.hide(); },
         update(s) {
-          const T = s.at(2), red = s.on(2) && T >= RED;
-          s.hideHud = !red; s.post = red && T >= RED + 7 * VD - WIPE ? { tonemap: 0, bloom: .7, threshold: .95, vignette: .15, grain: .02, ca: .001 } : { tonemap: 0, bloom: 0, vignette: 0, grain: .012, ca: 0 };
-          if (red) { const a = Math.min(NV - 1, Math.floor((T - RED) / VD)); s.page = String(3 + a); s.hudColor = T > CARD ? '#111' : HUDC[a]; }
-          else { s.page = null; s.hudColor = null; }
-          // sounds for the self-editing sequence
-          if (s.on(2)) {
-            if (s.cross(2, 3.4) || s.cross(2, 5.4) || s.cross(2, 7.6) || s.cross(2, 8.2)) AU.hit('select');
-            if (s.cross(2, 3.9)) AU.hit('riser');
-            if (s.cross(2, 7.9)) AU.hit('pop');
-            if (s.cross(2, RED)) AU.hit('snap');
-            for (let i = 1; i < NV; i++) if (s.cross(2, RED + i * VD)) AU.hit(i === 7 ? 'shimmer' : i === 8 ? 'slam' : i === 9 ? 'paper' : 'whoosh');
-            if (s.cross(2, RED + CONF * VD + 1.9)) AU.hit('whoosh');
-            if (s.cross(2, CARD)) AU.hit('flap');
-            if (s.cross(2, CARD + 1.5)) AU.hit('thud');
-          }
+          const u = mat.uniforms; u.uT.value = s.t; u.uAsp.value = V.W / V.H;
+          const m = s.on(1) ? lerp(2070, 2033, E.io3(s.p[1])) : 2070, sv = s.on(2) ? lerp(2060, 2047, E.io3(clamp((s.at(2) - .6) / 2.8))) : 2060;
+          u.uM.value = m; u.uMtrail.value = s.on(1) ? lerp(2070, m, clamp(s.at(1) - 2.6)) : 2070; u.uS.value = sv; u.uStrail.value = s.on(2) ? lerp(2060, sv, clamp(s.at(2) - 3.2)) : 2060;
+          u.uSon.value = s.k(2, 0, .8);
+          const rush = s.on(3) ? E.inExpo(s.p[3]) : 0;
+          u.uCamZ.value = Math.sin(s.t * .3) * .05 - Math.min(s.t * .05, 3) - rush * (Math.abs(zOf(2033)) - 4); u.uWarp.value = rush;
+          s.camZ = u.uCamZ.value;
+          s.post = { streak: .5, flare: .2, bloom: .55, threshold: 1.1, exposure: .9, vignette: .5, grain: .035, ca: .002 + rush * .02, halation: .4 };
+          if (s.cross(1, .1)) AU.hit('riser'); if (s.cross(1, 3.3)) AU.hit('bell'); if (s.cross(2, .5)) AU.hit('glass'); if (s.cross(2, 3.3)) AU.hit('bell'); if (s.cross(3, .1)) AU.hit('whoosh');
         },
-        render(slot, s) {
-          const T = s.at(2); if (!s.on(2) || T < RED + 7 * VD - WIPE) return;
-          const asp = V.W / V.H; chrome.uniforms.uAsp.value = asp; chrome.uniforms.uT.value = s.t;
-          chrome.uniforms.uFade.value = 0;
-          if (T < RED + X3 * VD + .1) pass(chrome, slot.hdr);
-          if (T > RED + X3 * VD - WIPE) {
-            const eu = ext.uniforms; eu.uAsp.value = asp; eu.uT.value = T - (RED + X3 * VD - WIPE); eu.uReveal.value = clamp((T - (RED + X3 * VD - WIPE)) / WIPE);
-            eu.uFade.value = sstep(RED + CONF * VD - WIPE, RED + CONF * VD + .3, T); pass(ext, slot.hdr);
-          }
-          if (T > RED + CONF * VD - WIPE) {
-            const lt = T - (RED + CONF * VD - WIPE);
-            ptsMat.uniforms.uP.value = clamp(lt / 1.6); ptsMat.uniforms.uScatter.value = E.in3(clamp((lt - 2.3) / 1.6)); ptsMat.uniforms.uTime.value = s.t;
-            ptsMat.uniforms.uSize.value = slot.hdr.height * .02;
-            cam.aspect = asp; cam.fov = asp < 1 ? 70 : 36; cam.position.set(Math.sin(lt * .3) * .4, .05, lerp(5.6, 4.4, E.out3(clamp(lt / 2.5)))); cam.lookAt(0, 0, 0); cam.updateProjectionMatrix();
-            R.setRenderTarget(slot.hdr); R.render(scene3, cam);
-          }
-        },
+        render(slot) { pass(mat, slot.hdr); },
         draw2d(g, s) {
-          const W = V.W, H = V.H, k = u(), T = s.at(2), red = s.on(2) && T >= RED;
-          if (!red) {
-            g.fillStyle = '#fff'; g.fillRect(0, 0, W, H);
-            // footer bar
-            g.fillStyle = '#a9c0e2'; g.fillRect(0, H - 78 * k, W, 8 * k); g.fillStyle = '#3f6fb5'; g.fillRect(0, H - 70 * k, W, 70 * k);
-            g.fillStyle = '#7f7f7f'; g.font = `${26 * k}px Arial`; g.textAlign = 'right'; g.fillText(s.on(1) ? '2' : '1', W - 56 * k, H - 100 * k); g.textAlign = 'left';
-            if (!s.on(1) || (s.p[1] < 1 && s.dir < 0 && s.beat === 0)) {
-              const a = E.out2(clamp(s.at(0) / .5));
-              g.globalAlpha = a * (1 - s.p[1]);
-              text(g, 'The Future of AI', { x: W / 2, y: H * .46, size: 96 * k, font: 'Arial', weight: 400, align: 'center', color: '#000', anim: 'fade' });
-              text(g, 'An Overview', { x: W / 2, y: H * .46 + 90 * k, size: 44 * k, font: 'Arial', weight: 400, align: 'center', color: '#595959', anim: 'fade' });
-              g.globalAlpha = 1;
-            }
-            if (s.on(1)) {
-              const tA = s.at(1), port = V.portrait;
-              // title (self-editing)
-              let title = 'Agenda', typing = false;
-              if (s.on(2)) {
-                const del = (str, t0, t1) => str.slice(0, Math.max(0, str.length - Math.floor(clamp((T - t0) / (t1 - t0)) * (str.length + .999))));
-                const typ = (str, t0, t1) => str.slice(0, Math.floor(clamp((T - t0) / (t1 - t0)) * str.length));
-                if (T < 1.05) title = del('Agenda', .3, 1.0);
-                else if (T < 8.4) title = typ('This slide is bad.', 1.1, 2.9);
-                else if (T < 9.55) title = del('This slide is bad.', 8.4, 9.4);
-                else title = typ('I can fix it.', 9.6, 10.9);
-                typing = T > .25;
-                if (prevTitleN !== -1 && title.length !== prevTitleN) AU.hit(title.length > prevTitleN ? 'type' : 'delete');
-                prevTitleN = title.length;
-              }
-              const tx = (port ? 80 : 140) * k, ty = 190 * k;
-              g.globalAlpha = E.out2(clamp(tA / .3));
-              g.fillStyle = '#000'; g.font = `${80 * k}px Arial`; g.fillText(title, tx, ty);
-              if (typing && (Math.floor(s.t * 2.2) % 2 === 0 || (T > .3 && T < 11))) { const tw = g.measureText(title).width; g.fillRect(tx + tw + 4 * k, ty - 66 * k, 3 * k, 80 * k); }
-              const titleBox = { x: tx - 16 * k, y: ty - 80 * k, w: Math.max(260 * k, g.measureText(title).width + 40 * k), h: 104 * k };
-              // bullets fly in from the left, then get deleted one by one
-              const items = ['Introduction', 'Benefits and challenges', 'Best practices', 'Next steps', 'Questions'];
-              const nB = s.on(2) ? 5 - Math.floor(clamp((T - 5.8) / 1.5) * 5.999) : 5;
-              if (nB < prevBul) AU.hit('delete'); prevBul = nB;
-              const bx = (port ? 90 : 170) * k, by = 330 * k;
-              g.font = `${46 * k}px Arial`;
-              for (let i = 0; i < nB; i++) { const e = E.out3(clamp((tA - .3 - i * .35) / .5)); g.globalAlpha = e; g.fillStyle = '#000'; g.fillText('•  ' + items[i], bx - (1 - e) * 700 * k, by + i * 92 * k); }
-              g.globalAlpha = 1;
-              const bulBox = { x: bx - 20 * k, y: by - 56 * k, w: 640 * k, h: 92 * k * 5 };
-              // Excel-style chart
-              const cb = port ? { x: 80 * k, y: 900 * k, w: W - 160 * k, h: 560 * k } : { x: 1040 * k, y: 290 * k, w: 760 * k, h: 520 * k };
-              const chartGone = s.on(2) && T > 7.9;
-              const ce = E.out2(clamp((tA - 1.6) / .6));
-              if (!chartGone && ce > 0) {
-                g.globalAlpha = ce;
-                g.fillStyle = '#595959'; g.font = `${30 * k}px Arial`; g.textAlign = 'center'; g.fillText('AI Progress (Projected)', cb.x + cb.w / 2, cb.y + 34 * k);
-                const px = cb.x + 70 * k, pw = cb.w - 100 * k, py = cb.y + 70 * k, ph = cb.h - 150 * k;
-                g.strokeStyle = '#d9d9d9'; g.lineWidth = 1.5 * k; g.font = `${20 * k}px Arial`; g.fillStyle = '#595959'; g.textAlign = 'right';
-                for (let i = 0; i <= 5; i++) { const y = py + ph - i / 5 * ph; g.beginPath(); g.moveTo(px, y); g.lineTo(px + pw, y); g.stroke(); g.fillText(i * 20, px - 10 * k, y + 7 * k); }
-                g.textAlign = 'center'; ['2022', '2023', '2024', '2025', '2026'].forEach((l, i) => g.fillText(l, px + i / 4 * pw, py + ph + 30 * k));
-                const bend = s.on(2) ? E.io3(clamp((T - 3.9) / 1.1)) : 0;
-                const lin = [10, 22, 31, 40, 52], ex = [3, 5, 9, 24, 100];
-                g.strokeStyle = '#4472c4'; g.lineWidth = 4.5 * k; g.beginPath();
-                for (let i = 0; i < 5; i++) { const v = lerp(lin[i], ex[i], bend); const x = px + i / 4 * pw, y = py + ph - v / 100 * ph; i ? g.lineTo(x, y) : g.moveTo(x, y); }
-                g.stroke();
-                g.fillStyle = '#4472c4'; g.fillRect(cb.x + cb.w / 2 - 70 * k, cb.y + cb.h - 30 * k, 16 * k, 16 * k); g.fillStyle = '#595959'; g.textAlign = 'left'; g.fillText('Series 1', cb.x + cb.w / 2 - 44 * k, cb.y + cb.h - 15 * k);
-                g.globalAlpha = 1;
-              }
-              g.textAlign = 'left';
-              if (s.on(2)) {
-                if (T >= 3.4 && T < 5.4) sel.set(cb); else if (T >= 5.4 && T < 7.6) sel.set(bulBox); else if (T >= 7.6 && T < 8.05) sel.set(cb); else if (T >= 8.2) sel.set(titleBox); else sel.hide();
-              } else sel.hide();
-            }
-          } else {
-            // redesign sequence
-            const a = Math.min(NV - 1, Math.floor((T - RED) / VD)), tt = T - RED - a * VD;
-            let box;
-            if (tt < WIPE && a > 0) {
-              const e = tt / WIPE, kind = WIPES[a];
-              if (a < 7) { variant(g, a - 1, tt + VD); g.save(); wipePath(g, kind, e, a); g.clip(); box = variant(g, a, tt); g.restore(); }
-              else if (a === 7) { g.save(); g.beginPath(); g.rect(0, 0, W, H); wipePath(g, kind, e, a); g.clip('evenodd'); variant(g, 6, tt + VD); g.restore(); box = variant(g, 7, tt); }
-              else box = variant(g, a, tt);
-            } else box = variant(g, a, tt);
-            if (a !== lastVar) { lastVar = a; if (a > 0) AU.hit('select', 0, .05); }
-            const cardT = T - CARD;
-            if (cardT < 0 && box) sel.set(box); else sel.hide();
-            // the real chart flies in as a card, flips, then fills the frame
-            if (cardT > 0) {
-              const fl = E.out4(clamp(cardT / 1.3)), fill = E.io4(clamp((cardT - 1.6) / 1));
-              const cw0 = Math.min(W * .62, H * .62 * 16 / 9), ch0 = cw0 * 9 / 16;
-              const scale = Math.max(W / cw0, H / ch0);
-              const sc = lerp(1, scale, fill), ang = (1 - fl) * Math.PI * .5;
-              g.save(); g.translate(W / 2, H / 2 + (1 - fl) * H * .6); g.rotate((1 - fl) * -.25 * (1 - fill)); g.scale(Math.cos(ang) * sc, sc);
-              g.shadowColor = 'rgba(0,0,0,.35)'; g.shadowBlur = 60 * (1 - fill); g.shadowOffsetY = 30 * (1 - fill);
-              g.drawImage(chart, -cw0 / 2, -ch0 / 2, cw0, ch0); g.restore();
-            }
-          }
-          sel.draw(g, s.dt, k);
+          const W = V.W, H = V.H, k = Math.min(W / 1920, H / 1080) * (V.portrait ? 1.6 : 1), x = (V.portrait ? 60 : 120) * k;
+          // decade labels on the gates
+          g.font = `500 ${18 * k}px "Geist Mono", monospace`; g.textAlign = 'center';
+          for (let yr = 2030; yr <= 2090; yr += 10) { const pp = proj(0, 2.75, zOf(yr), s.camZ); if (!pp) continue; g.globalAlpha = clamp(1.4 - pp.d / 60); g.fillStyle = '#ffd1ec'; g.font = `500 ${clamp(30 / pp.d * 10, 9, 26) * k}px "Geist Mono", monospace`; g.fillText(yr, pp.x, pp.y); }
+          g.globalAlpha = 1; g.textAlign = 'left';
+          const tag = (bx, yr, col, l1, l2, a) => { const pp = proj(bx, .95, zOf(yr), s.camZ); if (!pp || a <= 0) return; g.globalAlpha = a; const left = bx < 0; const tx = pp.x + (left ? -24 : 24) * k; g.textAlign = left ? 'right' : 'left'; g.fillStyle = col; g.font = `300 ${58 * k}px Unbounded, sans-serif`; g.fillText(Math.round(yr), tx, pp.y - 46 * k); g.font = `500 ${17 * k}px "Geist Mono", monospace`; g.fillStyle = 'rgba(255,255,255,.75)'; g.fillText(l1, tx, pp.y - 14 * k); g.fillText(l2, tx, pp.y + 6 * k); g.textAlign = 'left'; g.globalAlpha = 1; };
+          const rush = s.on(3) ? s.p[3] : 0;
+          tag(-1.5, mat.uniforms.uM.value, '#7ff3ff', 'METACULUS COMMUNITY', s.on(1) ? 'FEB 2026' : 'IN 2020', (1 - rush * 2));
+          tag(1.5, mat.uniforms.uS.value, '#ffc46b', 'AI RESEARCHER SURVEY', s.on(2) && s.at(2) > 2 ? '2023' : '2022', s.k(2, .2, 1) * (1 - rush * 2));
+          const out = b => s.beat > b ? clamp(s.at(b + 1) / .5) : 0;
+          const H1 = ['General AI?\nAbout fifty years away.', 'Six years later:\n2033.', 'Experts: 13 years closer\nin a single year.', 'The horizon is\ncoming toward us.'];
+          const anims = ['decode', 'flip', 'mask', 'zoom'];
+          for (let b = 0; b < 4; b++) if (s.beat >= b && out(b) < 1) text(g, H1[b], { x, y: H * (V.portrait ? .12 : .16), size: (V.portrait ? 50 : 76) * k, font: 'Unbounded', weight: 300, color: '#fff', track: -.035, lh: 1.08, anim: anims[b], by: b === 2 ? 'line' : undefined, accent: '#ff7ad1', glow: 'rgba(255,60,160,.35)', maxW: W - 2 * x }, s.k(b, .2, 1.6, E.lin), out(b));
+          const caps = ['Metaculus forecasting community, 2020', 'Metaculus community median, February 2026', 'AI Impacts expert surveys: ~2060 (2022) → 2047 (2023)', ''];
+          if (caps[s.beat]) text(g, caps[s.beat], { x, y: H * (V.portrait ? .12 : .16) + 190 * k, size: 20 * k, font: 'Geist Mono', color: 'rgba(255,220,240,.7)', anim: 'fade' }, s.k(s.beat, 1, 2, E.lin));
         },
       };
     },
@@ -1338,18 +1118,18 @@ void main(){ float k=clamp((uP-aSeed*.45)/.55,0.,1.); k=1.-pow(1.-k,3.);
   const TIP = [[0, 2], [.5, 40], [1, 147], [1.5, 330], [2, Y(17.4)], [2.6, 2400], [3, TOP], [4, TOP]];
   const tipAt = u => { for (let i = 0; i < TIP.length - 1; i++) if (u <= TIP[i + 1][0]) { const t = E.io2((u - TIP[i][0]) / (TIP[i + 1][0] - TIP[i][0])); return Math.exp(lerp(Math.log(TIP[i][1]), Math.log(TIP[i + 1][1]), t)); } return TOP; };
   const LINES = [
-    ['Then it left the slide.', 'Task length AI agents can finish on their own · METR'],
+    ['This is the line that moved them.', 'Task length AI agents can finish on their own · METR'],
     ['Doubling every 3.6 months.', 'METR, November 2026 · combined task suites, 50% success'],
     ['~200 hours by mid-2027.\nIf the trend just holds.', 'Dashed line: extrapolation. METR says estimates above ~16 hours are unreliable.'],
     ['Everything before 2025\nis down here.', 'GPT-4 managed five minutes. Each sheet of paper is one hour.'],
   ];
 
   SCENES.push({
-    id: 'tower', title: 'The real chart', enterWith: 'portal', hud: { color: '#ffffff' },
+    id: 'tower', title: 'The line that moved them', enterWith: 'portal', hud: { color: '#ffffff' },
     beats: [{ dur: 6, hold: 2 }, { dur: 7, hold: 2 }, { dur: 8, hold: 2 }, { dur: 5, hold: 3 }],
     bed: { chord: [0, 4, 7, 11], oct: 3, cut: 700, vol: .05, level: [.35, .45, .6, .4] },
     notes: [
-      'This is METR\'s measurement: how long a task, measured in human time, an AI agent can finish on its own half the time. One sheet of paper here is one hour. The line left the slide in late 2025.',
+      'This is METR\'s measurement: how long a task, measured in human time, an AI agent can finish on its own half the time. One sheet of paper here is one hour. This is the curve the forecasters were reacting to.',
       'Across METR\'s combined task suites the doubling time is about 3.6 months. Claude Mythos Preview was estimated at roughly 17 hours, with a very wide error bar (8.5 to 55 hours).',
       'Extrapolate the trend and you reach about 200 hours, five work weeks, by mid-2027. That is an extrapolation, not a forecast, and METR warns its estimates above ~16 hours are unreliable.',
       'Look down. GPT-4, the model that shocked everyone in 2023, sits at five minutes. Everything before 2025 is a smudge at the bottom of the tower.',
@@ -1516,155 +1296,186 @@ void main(){
 
 // ---- 30-dominoes.js ----
 // =====================================================================
-// 30 · DOMINOES — each domino is 1.5× the last. 31 of them. A log-space
-// camera rides the chain so the current domino always fills the frame.
+// 30 · DOMINOES — each domino is 1.5× the last. 31 of them, obsidian with
+// neon pips that shift hue as they grow. A mirror-black floor reflects
+// them (true planar reflection), every impact rings a shockwave across
+// the floor and throws sparks, and time slows at each milestone.
 // =====================================================================
 
 {
-  const N = 31, H0 = 1; // 1 unit = 5 cm
-  const h = k => H0 * 1.5 ** k, meters = k => .05 * 1.5 ** k;
+  const N = 31;
+  const h = k => 1.5 ** k, meters = k => .05 * 1.5 ** k;
   const xs = [0]; for (let k = 0; k < N - 1; k++) xs.push(xs[k] + h(k) * .16 + h(k) * .6);
   const dur = k => .5 + .012 * k ** 1.4; const T0 = []; { let t = .8; for (let k = 0; k < N; k++) { T0.push(t); t += dur(k); } }
   const END = T0[N - 1] + dur(N - 1);
-  const thC = k => Math.asin(Math.min(.95, (h(k) * .6) / h(k)));
+  const thC = () => Math.asin(.6);
   function angle(k, t) {
     const a = t - T0[k]; if (a <= 0) return 0;
-    const d = dur(k), c = thC(k);
+    const d = dur(k), c = thC();
     if (a < d) return c * (a / d) ** 2;
-    if (k === N - 1) { const b = (a - d) / 1.2; return b >= 1 ? Math.PI / 2 : c + (Math.PI / 2 - c) * E.outBack(clamp(b)) ; }
+    if (k === N - 1) { const b = (a - d) / 1.4; return b >= 1 ? Math.PI / 2 : c + (Math.PI / 2 - c) * E.outBack(clamp(b)); }
     return c + (1.36 - c) * E.out2(clamp((a - d) / (dur(k + 1) * 1.3)));
   }
+  const ciAt = tf => { let k = 0; while (k < N - 1 && tf > T0[k + 1]) k++; return Math.min(N - 1, k + (k < N - 1 ? clamp((tf - T0[k]) / dur(k)) : 0)); };
+  const MILES = [[17, 'Domino 18 is as tall\nas a 15-storey building.'], [24, 'Domino 25 is taller\nthan the Burj Khalifa.'], [30, 'Domino 31 is taller\nthan Mount Everest.']];
+  // slow motion around each milestone: real seconds → falling time
+  const rate = ci => 1 - .72 * MILES.reduce((a, [m]) => a + Math.exp(-(((ci - m - .3) / .9) ** 2)), 0);
+  const warp = real => { let tf = 0; const st = .04; for (let t = 0; t < real; t += st) tf += Math.min(st, real - t) * Math.max(.2, rate(ciAt(tf))); return tf; };
+  const REAL_END = (() => { let tf = 0, t = 0; while (tf < END + 1.5 && t < 200) { tf += .04 * Math.max(.2, rate(ciAt(tf))); t += .04; } return t; })();
+  const hue = k => new THREE.Color().setHSL(lerp(.52, 1.08, k / (N - 1)) % 1, .95, .6);
   const fmtM = m => m < 1 ? `${Math.round(m * 100)} cm` : m < 1000 ? `${m < 10 ? m.toFixed(1) : Math.round(m)} m` : `${(m / 1000).toFixed(1)} km`;
-  const MILES = [[17, 'Domino 18 is as tall as a 15-storey building.'], [24, 'Domino 25 is taller than the Burj Khalifa.'], [30, 'Domino 31 is taller than Mount Everest.']];
 
-  let catcher, scene3, cam, mesh, ground, dust, dustMat, chips, chipMat, sunRef, lastHit = -1, impactT = -1;
+  let scene3, cam, rcam, mesh, ground, sparks, sparkMat, dust, dustMat, keyL, lastHit = -1, impactT = -1;
+  const impT = new Float32Array(N), impX = new Float32Array(N), impC = [];
+  for (let k = 0; k < N; k++) { impT[k] = T0[k] + dur(k); impX[k] = k < N - 1 ? xs[k + 1] : xs[k] + h(k) * .6; impC.push(hue(k)); }
+  const sky = shader(`uniform float uT,uP; void main(){ float y=vUv.y;
+    vec3 top=vec3(.01,.008,.03), mid=mix(vec3(.16,.03,.22),vec3(.3,.04,.12),uP), hor=mix(vec3(.1,.5,.7),vec3(1.,.35,.2),uP);
+    vec3 c=mix(hor*.5,mid,smoothstep(.3,.5,y)); c=mix(c,top,smoothstep(.5,1.,y));
+    float band=sin(vUv.x*6.+uT*.15+sin(vUv.x*13.-uT*.2))*.5+.5; c+=mix(vec3(.1,.9,.8),vec3(.9,.3,.9),vUv.x)*band*exp(-pow((y-.72-.05*sin(vUv.x*5.+uT*.1))*9.,2.))*.12;
+    gl_FragColor=vec4(c,1.); }`, { uT: { value: 0 }, uP: { value: 0 } });
+
   SCENES.push({
-    id: 'dominoes', title: 'Each one 1.5×', enterWith: 'shatter', hud: { color: '#f3e9dc' },
-    beats: [{ dur: 2, hold: 3 }, { dur: END + 2, hold: 2 }, { dur: 2, hold: 4 }],
-    bed: { chord: [0, 3, 7], oct: 2, cut: 500, vol: .06, level: [.25, .5, .35] },
+    id: 'dominoes', title: 'Each one 1.5×', enterWith: 'shatter', hud: { color: '#9ef6ff' },
+    beats: [{ dur: 2, hold: 3 }, { dur: REAL_END + 1, hold: 2 }, { dur: 2, hold: 4 }],
+    bed: { chord: [0, 3, 7, 10], oct: 2, cut: 500, vol: .06, level: [.25, .5, .35] },
     notes: [
       'A row of dominoes. Each one is exactly one and a half times the size of the one before. The first is five centimetres tall.',
       'Watch the counter. Domino 18 is about 49 metres. Domino 25 is taller than the Burj Khalifa. Domino 31, almost ten kilometres, is taller than Everest. Nothing about any single step looks dramatic.',
       'That is what a modest multiplier does when it compounds. Effective compute for frontier AI, meaning hardware times algorithmic efficiency, has been growing roughly tenfold a year.',
     ],
-    create(ctx, s) {
-      scene3 = new THREE.Scene(); cam = new THREE.PerspectiveCamera(40, 1.78, .05, 1e6);
+    create() {
+      scene3 = new THREE.Scene(); cam = new THREE.PerspectiveCamera(40, 1.78, .05, 1e6); rcam = cam.clone();
+      // face: obsidian with glowing pips + neon border (used as emissive map)
       const fc = document.createElement('canvas'); fc.width = 256; fc.height = 512; const g = fc.getContext('2d');
-      g.fillStyle = '#efe8da'; g.fillRect(0, 0, 256, 512); g.fillStyle = '#1b1712'; g.fillRect(28, 252, 200, 8);
-      const pip = (x, y) => { g.beginPath(); g.arc(x, y, 20, 0, 7); g.fill(); };
-      [[128, 128], [70, 70], [186, 186], [70, 186], [186, 70]].forEach(p => pip(...p)); [[70, 330], [186, 330], [70, 440], [186, 440], [70, 385], [186, 385]].forEach(p => pip(...p));
-      const faceTex = new THREE.CanvasTexture(fc); faceTex.colorSpace = THREE.SRGBColorSpace;
-      const side = new THREE.MeshStandardMaterial({ color: new THREE.Color('#e9e1d2'), roughness: .45 });
-      const face = new THREE.MeshStandardMaterial({ map: faceTex, roughness: .4 });
-      const geo = new THREE.BoxGeometry(1, 1, 1); geo.translate(.5, .5, 0); // pivot at back-bottom edge, extends +x (thickness), +y (height)
-      mesh = new THREE.InstancedMesh(geo, [face, face, side, side, side, side], N); mesh.frustumCulled = false; scene3.add(mesh);
-      scene3.add(new THREE.HemisphereLight(0xffe9d2, 0x2a1d14, .9));
-      const sunL = new THREE.DirectionalLight(0xffd7a8, 3.2); sunL.position.set(-.4, .7, .6); scene3.add(sunL, sunL.target);
-      sunL.castShadow = true; sunL.shadow.mapSize.set(2048, 2048); sunL.shadow.bias = -.0004; sunL.shadow.normalBias = .02; mesh.castShadow = true;
-      catcher = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.ShadowMaterial({ opacity: .6, depthWrite: false })); catcher.rotation.x = -Math.PI / 2; catcher.receiveShadow = true; catcher.renderOrder = 2; scene3.add(catcher);
-      const SUN_DIR = new THREE.Vector3(-.55, .75, .5).normalize(); sunRef = sunL;
-      const rim = new THREE.DirectionalLight(0x9ab0ff, .45); rim.position.set(.6, .3, -.8); scene3.add(rim);
-      // ground with a log-scale grid that stays readable at every zoom level
-      ground = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), shader(`varying vec3 vW; uniform float uScale;
-float grid(vec2 p,float s){ vec2 q=abs(fract(p/s-.5)-.5)*s; vec2 w=fwidth(p)*1.2; vec2 l=1.-smoothstep(vec2(0.),w,q); return max(l.x,l.y); }
+      g.fillStyle = '#000'; g.fillRect(0, 0, 256, 512); g.strokeStyle = '#fff'; g.lineWidth = 7; g.strokeRect(10, 10, 236, 492); g.fillStyle = '#fff'; g.fillRect(40, 252, 176, 8);
+      const pip = (x, y) => { g.beginPath(); g.arc(x, y, 19, 0, 7); g.fill(); };
+      [[128, 128], [72, 72], [184, 184], [72, 184], [184, 72]].forEach(p => pip(...p)); [[72, 330], [184, 330], [72, 440], [184, 440], [72, 385], [184, 385]].forEach(p => pip(...p));
+      const em = new THREE.CanvasTexture(fc);
+      const tint = m => { m.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n#ifdef USE_INSTANCING_COLOR\n totalEmissiveRadiance *= vColor * 1.5;\n#endif'); }; return m; };
+      const face = tint(new THREE.MeshStandardMaterial({ color: 0x0a0a10, roughness: .22, metalness: .5, emissive: 0xffffff, emissiveMap: em }));
+      const side = tint(new THREE.MeshStandardMaterial({ color: 0x0c0c14, roughness: .18, metalness: .6, emissive: 0x000000 }));
+      const geo = new THREE.BoxGeometry(1, 1, 1); geo.translate(.5, .5, 0);
+      mesh = new THREE.InstancedMesh(geo, [face, face, side, side, side, side], N); mesh.frustumCulled = false; mesh.castShadow = true; mesh.receiveShadow = true;
+      for (let k = 0; k < N; k++) mesh.setColorAt(k, hue(k));
+      scene3.add(mesh);
+      scene3.add(new THREE.HemisphereLight(0x5a3a8a, 0x05030a, .7));
+      keyL = new THREE.DirectionalLight(0xffc6e8, 2.4); scene3.add(keyL, keyL.target);
+      keyL.castShadow = true; keyL.shadow.mapSize.set(2048, 2048); keyL.shadow.bias = -.0004; keyL.shadow.normalBias = .02;
+      const rim1 = new THREE.DirectionalLight(0x34e8ff, 3.5); rim1.position.set(.7, .35, -.6); scene3.add(rim1);
+      const rim2 = new THREE.DirectionalLight(0xff3fa8, 2.5); rim2.position.set(-.8, .2, -.5); scene3.add(rim2);
+      // mirror floor: true planar reflection (sampled through the mirrored camera), log grid, shockwaves
+      ground = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), shader(`varying vec3 vW; varying vec4 vR; uniform sampler2D tRefl; uniform float uScale,uTf,uHasRefl; uniform float uImp[${N}]; uniform float uX[${N}]; uniform vec3 uCol[${N}];
+float grid(vec2 p,float s){ vec2 q=abs(fract(p/s-.5)-.5)*s; vec2 w=fwidth(p)*1.2; vec2 l=1.-smoothstep(vec2(0.),w,q); return max(l.x,l.y)*clamp(1.-length(fwidth(p))/s*4.,0.,1.); }
 void main(){ float lg=log(uScale)/log(10.); float f=fract(lg); float s0=pow(10.,floor(lg));
+  vec3 c=vec3(.006,.005,.01);
+  vec2 ruv=vR.xy/vR.w*.5+.5; vec3 refl=vec3(0.);
+  if(uHasRefl>.5){ float b=.004; refl=(texture(tRefl,ruv).rgb*2.+texture(tRefl,ruv+vec2(b,0.)).rgb+texture(tRefl,ruv-vec2(b,0.)).rgb+texture(tRefl,ruv+vec2(0.,b*1.5)).rgb+texture(tRefl,ruv-vec2(0.,b*1.5)).rgb)/6.; }
+  vec3 V=normalize(cameraPosition-vW); float fres=.25+.75*pow(1.-max(V.y,0.),4.);
+  c+=refl*fres*.85*(.9+.1*vnoise(vW.xz/s0*4.));
   float g=grid(vW.xz,s0)*(1.-f)+grid(vW.xz,s0*10.);
-  vec3 c=vec3(.075,.06,.05)*(.8+.2*vnoise(vW.xz/s0*3.));
-  c+=vec3(.35,.28,.22)*g*.35;
-  float d=length(vW.xz-vec2(0.))/uScale; c*=1.;
-  gl_FragColor=vec4(c,1.); }`, { uScale: { value: 1 } }, { depth: true, vert: `varying vec3 vW; varying vec2 vUv; void main(){ vec4 w=modelMatrix*vec4(position,1.); vW=w.xyz; vUv=uv; gl_Position=projectionMatrix*viewMatrix*w; }` }));
+  c+=vec3(.25,.6,1.)*g*.12;
+  for(int k=0;k<${N};k++){ float t=uTf-uImp[k]; if(t<0.||t>3.5) continue; float hk=pow(1.5,float(k));
+    float r=t*hk*(1.2+float(k==${N - 1})*1.6); float d=abs(length(vW.xz-vec2(uX[k],0.))-r);
+    c+=uCol[k]*exp(-d/(hk*.03+r*.02))*.9*exp(-t*1.3)*(1.+float(k==${N - 1})*3.); }
+  gl_FragColor=vec4(c,1.); }`, { tRefl: { value: null }, uScale: { value: 1 }, uTf: { value: 0 }, uHasRefl: { value: 0 }, uImp: { value: impT }, uX: { value: impX }, uCol: { value: impC }, uRVP: { value: new THREE.Matrix4() } },
+        { depth: true, vert: `uniform mat4 uRVP; varying vec3 vW; varying vec4 vR; varying vec2 vUv; void main(){ vec4 w=modelMatrix*vec4(position,1.); vW=w.xyz; vR=uRVP*w; vUv=uv; gl_Position=projectionMatrix*viewMatrix*w; }` }));
       ground.rotation.x = -Math.PI / 2; scene3.add(ground);
-      // dust burst for the final impact
-      const DN = 5000, dp = new Float32Array(DN * 3), dv = new Float32Array(DN * 4);
-      for (let i = 0; i < DN; i++) { const a = Math.random() * 6.283, sp = .2 + Math.random(); dv.set([Math.cos(a) * sp, .15 + Math.random() * .6, Math.sin(a) * sp, Math.random()], i * 4); }
-      const dg = new THREE.BufferGeometry(); dg.setAttribute('position', new THREE.BufferAttribute(dp, 3)); dg.setAttribute('aV', new THREE.BufferAttribute(dv, 4));
-      dustMat = shader(`varying float vA; void main(){ float d=length(gl_PointCoord-.5); if(d>.5) discard; gl_FragColor=vec4(vec3(.75,.66,.55)*.9,(1.-d*2.)*(1.-d*2.)*vA*.07); }`,
-        { uT: { value: -1 }, uO: { value: new THREE.Vector3() }, uS: { value: 1 }, uPx: { value: 1 } },
-        { blend: true, vert: `attribute vec4 aV; uniform float uT,uS,uPx; uniform vec3 uO; varying float vA; varying vec2 vUv;
-void main(){ float t=max(uT,0.); vec3 v=aV.xyz; float k=1.-exp(-t*1.4);
-  vec3 p=uO+vec3(v.x*k*3.2,v.y*k*.5+aV.w*.08,v.z*k*3.2)*uS;
-  vec4 mv=modelViewMatrix*vec4(p,1.); gl_Position=projectionMatrix*mv; gl_PointSize=uPx*uS*(.02+aV.w*.05)*(1.+t*.4)/-mv.z;
-  vA=step(0.,uT)*exp(-t*.35)*smoothstep(0.,.2,t); vUv=vec2(0.); }` });
-      dust = new THREE.Points(dg, dustMat); dust.frustumCulled = false; scene3.add(dust);
-      // chips + puffs at every impact (per domino, scaled to its size)
-      const PER = 90, CN = PER * N, cv = new Float32Array(CN * 4), ck = new Float32Array(CN);
-      for (let i = 0; i < CN; i++) { const a = Math.random() * 6.283; cv.set([Math.cos(a) * (.2 + Math.random()), .3 + Math.random() * 1.2, Math.sin(a) * (.2 + Math.random()), Math.random()], i * 4); ck[i] = Math.floor(i / PER); }
-      const cg = new THREE.BufferGeometry(); cg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(CN * 3), 3)); cg.setAttribute('aV', new THREE.BufferAttribute(cv, 4)); cg.setAttribute('aK', new THREE.BufferAttribute(ck, 1));
-      const impT = new Float32Array(N), impX = new Float32Array(N);
-      for (let k = 0; k < N; k++) { impT[k] = T0[k] + dur(k); impX[k] = k < N - 1 ? xs[k + 1] : xs[k] + h(k) * .6; }
-      chipMat = shader(`varying float vA; varying float vS; void main(){ vec2 c=gl_PointCoord-.5; if(vS>.5){ if(abs(c.x)>.3||abs(c.y)>.18) discard; gl_FragColor=vec4(vec3(.85,.8,.72)*.8,vA); } else { float d=length(c); if(d>.5) discard; gl_FragColor=vec4(vec3(.8,.72,.62),(1.-d*2.)*(1.-d*2.)*vA*.07); } }`,
+      // sparks thrown at every impact, in that domino's hue
+      const PER = 110, CN = PER * N, cv = new Float32Array(CN * 4), ck = new Float32Array(CN), cc = new Float32Array(CN * 3);
+      for (let i = 0; i < CN; i++) { const a = Math.random() * 6.283, k = Math.floor(i / PER); cv.set([Math.cos(a) * (.3 + Math.random()), .4 + Math.random() * 1.6, Math.sin(a) * (.3 + Math.random()), Math.random()], i * 4); ck[i] = k; const c = hue(k); cc.set([c.r, c.g, c.b], i * 3); }
+      const cg = new THREE.BufferGeometry(); cg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(CN * 3), 3)); cg.setAttribute('aV', new THREE.BufferAttribute(cv, 4)); cg.setAttribute('aK', new THREE.BufferAttribute(ck, 1)); cg.setAttribute('aC', new THREE.BufferAttribute(cc, 3));
+      sparkMat = shader(`varying float vA; varying vec3 vC; void main(){ vec2 c=gl_PointCoord-.5; float d=dot(c,c); gl_FragColor=vec4(vC*exp(-d*30.)*vA*3.,1.); }`,
         { uTf: { value: 0 }, uImp: { value: impT }, uX: { value: impX }, uPx: { value: 1 } },
-        { blend: true, vert: `attribute vec4 aV; attribute float aK; uniform float uTf,uPx; uniform float uImp[${N}]; uniform float uX[${N}]; varying float vA; varying float vS; varying vec2 vUv;
-void main(){ int k=int(aK+.5); float t=uTf-uImp[k]; float h=pow(1.5,aK);
-  float chip=step(.55,aV.w); vS=chip;
-  vec3 o=vec3(uX[k],h*.78,0.);
-  vec3 p=o+vec3(aV.x*t*.8,aV.y*t*1.4-t*t*2.2*chip,aV.z*t*.8)*h*.35*mix(1.6,1.,chip);
-  p.y=max(p.y,h*.01);
-  vec4 mv=modelViewMatrix*vec4(p,1.); gl_Position=projectionMatrix*mv; gl_PointSize=clamp(uPx*h*mix(.06,.03,chip)*(1.+t*.6*(1.-chip))/-mv.z,0.,60.);
-  vA=step(0.,t)*clamp(1.-t/mix(2.4,1.4,chip),0.,1.)*step(t,3.); vUv=vec2(0.); }` });
-      chips = new THREE.Points(cg, chipMat); chips.frustumCulled = false; scene3.add(chips);
-      const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), Z = new THREE.Vector3(0, 0, 1), P = new THREE.Vector3(), S = new THREE.Vector3();
-      let tf = 0, ci = 0;
+        { blend: 'add', vert: `attribute vec4 aV; attribute float aK; attribute vec3 aC; uniform float uTf,uPx; uniform float uImp[${N}]; uniform float uX[${N}]; varying float vA; varying vec3 vC; varying vec2 vUv;
+void main(){ int k=int(aK+.5); float t=uTf-uImp[k]; float hk=pow(1.5,aK);
+  vec3 o=vec3(uX[k],hk*.78,0.);
+  vec3 p=o+vec3(aV.x*t*1.2,aV.y*t*1.6-t*t*3.2,aV.z*t*1.2)*hk*.4; p.y=max(p.y,0.);
+  vec4 mv=modelViewMatrix*vec4(p,1.); gl_Position=projectionMatrix*mv; gl_PointSize=clamp(uPx*hk*.03/-mv.z,1.,9.);
+  vC=mix(vec3(1.,.95,.85),aC,clamp(t*2.,0.,1.)); vA=step(0.,t)*clamp(1.-t/(.8+aV.w),0.,1.); vUv=vec2(0.); }` });
+      sparks = new THREE.Points(cg, sparkMat); sparks.frustumCulled = false; scene3.add(sparks);
+      // the last one lands: a ring of glowing dust
+      const DN = 6000, dv = new Float32Array(DN * 4);
+      for (let i = 0; i < DN; i++) { const a = Math.random() * 6.283, sp = .2 + Math.random(); dv.set([Math.cos(a) * sp, .05 + Math.random() * .4, Math.sin(a) * sp, Math.random()], i * 4); }
+      const dg = new THREE.BufferGeometry(); dg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(DN * 3), 3)); dg.setAttribute('aV', new THREE.BufferAttribute(dv, 4));
+      dustMat = shader(`varying float vA; void main(){ float d=length(gl_PointCoord-.5); if(d>.5) discard; gl_FragColor=vec4(vec3(1.,.45,.55)*(1.-d*2.)*vA,1.); }`,
+        { uT: { value: -1 }, uO: { value: new THREE.Vector3() }, uS: { value: 1 }, uPx: { value: 1 } },
+        { blend: 'add', vert: `attribute vec4 aV; uniform float uT,uS,uPx; uniform vec3 uO; varying float vA; varying vec2 vUv;
+void main(){ float t=max(uT,0.); float k=1.-exp(-t*1.2);
+  vec3 p=uO+vec3(aV.x*k*3.4,aV.y*k*.6+aV.w*.05,aV.z*k*3.4)*uS;
+  vec4 mv=modelViewMatrix*vec4(p,1.); gl_Position=projectionMatrix*mv; gl_PointSize=clamp(uPx*uS*(.012+aV.w*.02)/-mv.z,1.,30.);
+  vA=step(0.,uT)*exp(-t*.5)*smoothstep(0.,.15,t)*.25; vUv=vec2(0.); }` });
+      dust = new THREE.Points(dg, dustMat); dust.frustumCulled = false; scene3.add(dust);
+
+      const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), Z = new THREE.Vector3(0, 0, 1), P = new THREE.Vector3(), S = new THREE.Vector3(), OFF = new THREE.Vector3();
+      const KEY_DIR = new THREE.Vector3(-.55, .8, .45).normalize();
+      let tf = 0, ci = 0, hc = 1, xc = 0;
       return {
         enter() { lastHit = -1; impactT = -1; },
         update(s) {
-          tf = s.on(1) ? s.at(1) : 0; if (s.on(2)) tf = END + s.at(2) + 2;
+          tf = s.on(2) ? END + 2 + s.at(2) : s.on(1) ? warp(s.at(1)) : 0;
           for (let k = 0; k < N; k++) {
             const hk = h(k), th = angle(k, tf);
-            Q.setFromAxisAngle(Z, -th);
-            P.set(xs[k] + hk * .16, 0, 0); // rotate around front-bottom edge
-            const off = new THREE.Vector3(-hk * .16, 0, 0).applyQuaternion(Q);
-            M.compose(P.clone().add(off), Q, S.set(hk * .16, hk, hk * .5)); mesh.setMatrixAt(k, M);
-            if (k > lastHit && tf - T0[k] >= dur(k)) { lastHit = k; if (s.on(1) && s.dir > 0 && s.at(1) < END + 1) AU.hit('domino', k / (N - 1)); if (k === N - 1) { impactT = tf; if (s.on(1)) AU.hit('boom'); } }
+            Q.setFromAxisAngle(Z, -th); OFF.set(-hk * .16, 0, 0).applyQuaternion(Q);
+            M.compose(P.set(xs[k] + hk * .16, 0, 0).add(OFF), Q, S.set(hk * .16, hk, hk * .5)); mesh.setMatrixAt(k, M);
+            if (k > lastHit && tf >= impT[k]) { lastHit = k; if (s.on(1) && !s.on(2) && s.dir > 0) AU.hit('domino', k / (N - 1)); if (k === N - 1) { impactT = impT[k]; if (s.on(1) && !s.on(2)) { AU.hit('boom'); AU.hit('shimmer'); } } }
           }
           mesh.instanceMatrix.needsUpdate = true;
-          // which domino is the camera on? continuous index (log space)
-          let k = 0; while (k < N - 1 && tf > T0[k + 1]) k++;
-          ci = Math.min(N - 1, k + clamp((tf - T0[k]) / dur(k)) * (k < N - 1 ? 1 : 0)) ;
-          const c0 = Math.floor(ci), fr = ci - c0, hc = 1.5 ** ci;
-          const xc = lerp(xs[c0], xs[Math.min(N - 1, c0 + 1)], fr) + hc * .3;
-          const fin = clamp((tf - END) / 4);
-          const orbit = .35 + s.t * .02 + s.mouse.x * .25 + fin * .5;
-          const dist = hc * (2.6 + fin * 2.2);
-          const shake = impactT > 0 ? Math.exp(-(tf - impactT) * 1.5) * hc * .03 : 0;
-          cam.position.set(xc + Math.sin(orbit) * dist + Math.sin(s.t * 40) * shake, hc * (.55 + s.mouse.y * .2 + fin * .5) + Math.cos(s.t * 33) * shake, Math.cos(orbit) * dist);
-          cam.lookAt(xc, hc * .42, 0); cam.near = hc * .02; cam.far = hc * 4000; cam.aspect = V.W / V.H; cam.fov = V.portrait ? 62 : 40; cam.updateProjectionMatrix();
-          ground.material.uniforms.uScale.value = hc; ground.scale.setScalar(hc * 3000); ground.position.set(xc, 0, 0); catcher.scale.setScalar(hc * 3000); catcher.position.set(xc, hc * .0015, 0);
-          chipMat.uniforms.uTf.value = tf; chipMat.uniforms.uPx.value = V.H;
-          sunRef.target.position.set(xc, 0, 0); sunRef.position.set(xc + SUN_DIR.x * hc * 8, SUN_DIR.y * hc * 8, SUN_DIR.z * hc * 8);
-          const sc2 = sunRef.shadow.camera; sc2.left = sc2.bottom = -hc * 3.2; sc2.right = sc2.top = hc * 3.2; sc2.near = hc * .5; sc2.far = hc * 20; sc2.updateProjectionMatrix();
-          dustMat.uniforms.uT.value = impactT > 0 ? tf - impactT : -1; dustMat.uniforms.uO.value.set(xs[N - 1] + h(N - 1) * .6, 0, 0); dustMat.uniforms.uS.value = h(N - 1); dustMat.uniforms.uPx.value = V.H;
-          s.post = { bloom: .25, threshold: 1, exposure: 1.05, vignette: .5, grain: .035, ca: .0012, contrast: 1.06, lift: [.01, .012, .02] };
-          s.ci = ci;
+          ci = ciAt(tf); const c0 = Math.floor(ci), fr = ci - c0; hc = 1.5 ** ci;
+          xc = lerp(xs[c0], xs[Math.min(N - 1, c0 + 1)], fr) + hc * .3;
+          const fin = clamp((tf - END) / 4), slow = 1 - rate(ci);
+          const orbit = .45 + Math.sin(ci * .35) * .5 + s.mouse.x * .25 + fin * .6 + slow * .5;
+          const dist = hc * (2.5 - slow * .7 + fin * 2.4);
+          const shake = impactT > 0 ? Math.exp(-(tf - impactT) * 1.6) * hc * .04 : 0;
+          cam.position.set(xc + Math.sin(orbit) * dist + Math.sin(s.t * 41) * shake, hc * (.28 + slow * -.12 + s.mouse.y * .15 + fin * .55) + Math.cos(s.t * 37) * shake, Math.cos(orbit) * dist);
+          cam.up.set(Math.sin(ci * .4) * .12 * (1 - fin), 1, 0).normalize();
+          cam.lookAt(xc, hc * .45, 0); cam.near = hc * .02; cam.far = hc * 4000; cam.aspect = V.W / V.H; cam.fov = V.portrait ? 64 : 42; cam.updateProjectionMatrix();
+          // mirrored camera for the floor reflection
+          rcam.copy(cam); rcam.position.y = -cam.position.y; rcam.up.set(cam.up.x, -cam.up.y, cam.up.z); rcam.lookAt(xc, -hc * .45, 0); rcam.updateProjectionMatrix(); rcam.updateMatrixWorld();
+          const gu = ground.material.uniforms; gu.uScale.value = hc; gu.uTf.value = tf; gu.uRVP.value.multiplyMatrices(rcam.projectionMatrix, rcam.matrixWorldInverse);
+          ground.scale.setScalar(hc * 3000); ground.position.set(xc, 0, 0);
+          keyL.target.position.set(xc, 0, 0); keyL.position.set(xc + KEY_DIR.x * hc * 8, KEY_DIR.y * hc * 8, KEY_DIR.z * hc * 8);
+          const sc = keyL.shadow.camera; sc.left = sc.bottom = -hc * 3.2; sc.right = sc.top = hc * 3.2; sc.near = hc * .5; sc.far = hc * 20; sc.updateProjectionMatrix();
+          sparkMat.uniforms.uTf.value = tf; sparkMat.uniforms.uPx.value = V.H;
+          dustMat.uniforms.uT.value = impactT > 0 ? tf - impactT : -1; dustMat.uniforms.uO.value.set(impX[N - 1], 0, 0); dustMat.uniforms.uS.value = h(N - 1); dustMat.uniforms.uPx.value = V.H;
+          sky.uniforms.uT.value = s.t; sky.uniforms.uP.value = ci / (N - 1);
+          const flash = impactT > 0 ? Math.exp(-(tf - impactT) * 3) : 0;
+          s.post = { streak: .55, bloom: .6 + flash, threshold: .9, exposure: 1.05 + flash * .8, vignette: .55, grain: .035, ca: .0015 + slow * .004 + flash * .01, contrast: 1.08, halation: .4 };
+          s.ci = ci; s.slow = slow; s.hue = hue(Math.round(ci));
         },
         render(slot) {
-          R.setRenderTarget(slot.hdr); R.setClearColor(new THREE.Color(.012, .014, .03), 1); R.clear();
-          pass(sky, slot.hdr); R.render(scene3, cam);
+          // 1) reflection pass from below the floor
+          ground.visible = false; R.setRenderTarget(slot.aux); R.setClearColor(0, 1); R.clear(); pass(sky, slot.aux); R.render(scene3, rcam); ground.visible = true;
+          ground.material.uniforms.tRefl.value = slot.aux.texture; ground.material.uniforms.uHasRefl.value = 1;
+          // 2) main view
+          R.setRenderTarget(slot.hdr); R.setClearColor(0, 1); R.clear(); pass(sky, slot.hdr); R.render(scene3, cam);
         },
         draw2d(g, s) {
           const W = V.W, H = V.H, k = Math.min(W / 1920, H / 1080) * (V.portrait ? 1.6 : 1), x = (V.portrait ? 60 : 120) * k;
-          text(g, 'Each domino is 1.5×\nthe one before.', { x, y: H * .2, size: (V.portrait ? 60 : 86) * k, font: 'Unbounded', weight: 300, color: '#f3e9dc', track: -.035, anim: 'rise', maxW: W - x * 2 }, s.k(0, .2, 1.4, E.lin), s.on(1) ? clamp(s.at(1) / .6) : 0);
+          const col = '#' + (s.hue || new THREE.Color('#9ef6ff')).getHexString();
+          s.hudColor = col;
+          text(g, 'Each domino is 1.5×\nthe one before.', { x, y: H * (V.portrait ? .14 : .2), size: (V.portrait ? 56 : 86) * k, font: 'Unbounded', weight: 300, color: '#fff', track: -.035, anim: 'spring', glow: 'rgba(80,220,255,.35)', maxW: W - x * 2 }, s.k(0, .2, 1.4, E.lin), s.on(1) ? clamp(s.at(1) / .6) : 0);
           if (s.on(1) && !s.on(2)) {
-            const c = Math.round(s.ci) ;
+            const c = Math.min(N - 1, Math.round(s.ci)), by = H - (V.portrait ? 360 : 150) * k;
             g.globalAlpha = clamp(s.at(1) / .8);
-            g.fillStyle = 'rgba(243,233,220,.7)'; g.font = `500 ${20 * k}px "Geist Mono", monospace`; g.fillText('DOMINO', x, H - 230 * k);
-            g.fillStyle = '#f3e9dc'; g.font = `300 ${120 * k}px Unbounded, sans-serif`; g.fillText('#' + (c + 1), x, H - 110 * k);
-            g.font = `400 ${34 * k}px "Geist Mono", monospace`; g.fillText(fmtM(meters(Math.min(N - 1, s.ci))), x + 4 * k, H - 58 * k);
+            g.fillStyle = 'rgba(255,255,255,.6)'; g.font = `500 ${18 * k}px "Geist Mono", monospace`; g.fillText('DOMINO', x, by - 128 * k);
+            g.save(); g.shadowColor = col; g.shadowBlur = 30 * k; g.fillStyle = col; g.font = `800 ${118 * k}px Unbounded, sans-serif`; g.fillText('#' + (c + 1), x, by - 10 * k); g.restore();
+            g.fillStyle = '#fff'; g.font = `400 ${34 * k}px "Geist Mono", monospace`; g.fillText(fmtM(meters(s.ci)), x + 4 * k, by + 40 * k);
+            // a log ruler that fills as the chain grows
+            const rw = Math.min(W - 2 * x, 640 * k); g.fillStyle = 'rgba(255,255,255,.12)'; g.fillRect(x, by + 62 * k, rw, 3 * k); g.fillStyle = col; g.fillRect(x, by + 62 * k, rw * (s.ci / (N - 1)), 3 * k);
             g.globalAlpha = 1;
             for (const [m, l] of MILES) {
-              const t0 = T0[m] + dur(m) * .3, a = s.at(1) - t0; if (a < 0 || a > dur(m) + 2.2) continue;
-              text(g, l, { x: W / 2, y: H * .16, size: (V.portrait ? 40 : 56) * k, font: 'Unbounded', weight: 300, color: '#fff', align: 'center', track: -.03, anim: 'flip', maxW: W * .86 }, clamp(a / 1.1), clamp((a - dur(m) - 1.4) / .8));
+              const a = s.ci - m - .2; if (a < 0 || a > 1.4) continue;
+              text(g, l, { x: W / 2, y: H * (V.portrait ? .16 : .17), size: (V.portrait ? 40 : 60) * k, font: 'Unbounded', weight: 300, color: '#fff', align: 'center', track: -.03, lh: 1.06, anim: 'flip', glow: col, maxW: W * .9 }, clamp(a / .4), clamp((a - 1) / .4));
             }
           }
           if (s.on(2)) {
-            text(g, 'Small multiplier.\nUnreasonable result.', { x, y: H * .22, size: (V.portrait ? 60 : 88) * k, font: 'Unbounded', weight: 300, color: '#fff', track: -.035, anim: 'rise', maxW: W - x * 2 }, s.k(2, .1, 1.3, E.lin));
+            text(g, 'Small multiplier.\nUnreasonable result.', { x, y: H * .22, size: (V.portrait ? 56 : 88) * k, font: 'Unbounded', weight: 300, color: '#fff', track: -.035, anim: 'mask', by: 'line', stagger: .4, maxW: W - x * 2 }, s.k(2, .1, 1.3, E.lin));
             text(g, 'Effective compute for frontier AI has grown roughly 10× a year.', { x, y: H * .22 + 230 * k, size: 26 * k, font: 'Geist', weight: 400, color: 'rgba(255,255,255,.8)', anim: 'blur', maxW: W - x * 2 }, s.k(2, .9, 2.2, E.lin));
           }
         },
       };
     },
   });
-  const sky = shader(`void main(){ float y=vUv.y; vec3 c=mix(vec3(.16,.09,.07),vec3(.015,.02,.05),smoothstep(.2,1.,y)); c+=vec3(.5,.22,.1)*exp(-pow((y-.42)*5.,2.))*.4; gl_FragColor=vec4(c,1.); }`);
 }
 
 // ---- 40-loop.js ----
@@ -1922,6 +1733,256 @@ void main(){ float d=length(vW.xz); vec3 c=vec3(.01,.011,.016)*(.7+.3*vnoise(vW.
             g.font = `400 ${18 * k}px "Geist Mono", monospace`; g.fillStyle = 'rgba(251,246,236,.55)'; g.fillText('ILLUSTRATION · 1,000,000 × 50 = ~1.6 years of thinking per second', x, yb + 80 * k);
             g.globalAlpha = 1;
           }
+        },
+      };
+    },
+  });
+}
+
+// ---- 55-gigawatts.js ----
+// =====================================================================
+// 55 · GIGAWATTS — the build-out. A night continent; a billion small
+// lights of demand; then data centres erupt from the ground in clusters,
+// power lines pulse between them, and lightning cracks across the grid.
+// =====================================================================
+
+{
+  const NB = 900, CL = 14;
+  const KEYS = [
+    { u: 0, pos: [0, 420, 420], look: [0, 0, 0], fov: 46 },
+    { u: 1, pos: [160, 220, 330], look: [0, 10, 0], fov: 44 },
+    { u: 2, pos: [-120, 90, 210], look: [10, 30, 0], fov: 46 },
+    { u: 3, pos: [-40, 60, 150], look: [10, 40, 0], fov: 50 },
+  ];
+  let scene3, cam, blds, bMat, lights, lMat, lines, lnMat, bolt, boltGeo, ground;
+  const rr = prng(21), clusters = [];
+  for (let i = 0; i < CL; i++) clusters.push([(rr() - .5) * 520, (rr() - .5) * 360, .6 + rr() * .8]);
+  SCENES.push({
+    id: 'gigawatts', title: 'The build-out', enterWith: 'flaps', hud: { color: '#ffd36b' },
+    beats: [{ dur: 3, hold: 4 }, { dur: 4, hold: 4 }, { dur: 4, hold: 5 }],
+    bed: { chord: [0, 2, 7], oct: 2, cut: 450, vol: .06, wave: 'sawtooth', level: [.25, .4, .6] },
+    notes: [
+      'Demand first. DataReportal\'s Digital 2026 report counts more than a billion people using AI tools. ChatGPT alone reported around 900 million weekly users in February 2026.',
+      'Then supply. The big cloud companies plan roughly $700 billion of capital spending in 2026, most of it for AI data centres, close to double 2025. Estimates vary by source and by how you count.',
+      'And it is measured in power now, not chips. Meta\'s Louisiana campus is planned to scale to 5 gigawatts. A common rule of thumb is about $50 billion per gigawatt of AI capacity. Over 23 gigawatts of data centres were under construction worldwide in late 2025.',
+    ],
+    create() {
+      scene3 = new THREE.Scene(); cam = new THREE.PerspectiveCamera(46, 1.78, 1, 6000);
+      // ground: night continent with coastline + a billion lights (procedural)
+      ground = new THREE.Mesh(new THREE.PlaneGeometry(2400, 2400), shader(`varying vec3 vW; uniform float uT,uPop,uGrid;
+void main(){ vec2 p=vW.xz;
+  float land=fbm(p*.0022+3.)+.12*fbm(p*.01); float isL=smoothstep(.46,.5,land);
+  vec3 c=mix(vec3(.004,.008,.02),vec3(.012,.012,.018),isL);
+  float coast=exp(-abs(land-.48)*120.); c+=vec3(.1,.3,.5)*coast*.25;
+  // city lights: clustered, twinkling
+  vec2 g=floor(p*.35); float h=hash12(g); float dens=smoothstep(.55,.85,fbm(p*.006+9.))*isL;
+  float on=step(1.-dens*.8*uPop,h); vec2 f=fract(p*.35)-.5; float dot1=exp(-dot(f,f)*40.);
+  c+=vec3(1.,.72,.35)*on*dot1*(.6+.4*sin(uT*2.+h*40.))*3.;
+  c+=vec3(1.,.6,.3)*dens*uPop*.09;
+  // power grid lines
+  vec2 q=abs(fract(p/60.)-.5); float gl=(1.-smoothstep(0.,fwidth(p.x/60.)*1.5,q.x))+(1.-smoothstep(0.,fwidth(p.y/60.)*1.5,q.y));
+  c+=vec3(.2,.6,1.)*gl*.18*uGrid*isL;
+  float f2=1.-exp(-length(vW-cameraPosition)*.0009); c=mix(c,vec3(.01,.012,.03),f2);
+  gl_FragColor=vec4(c,1.); }`, { uT: { value: 0 }, uPop: { value: 0 }, uGrid: { value: 0 } }, { depth: true, vert: `varying vec3 vW; varying vec2 vUv; void main(){ vec4 w=modelMatrix*vec4(position,1.); vW=w.xyz; vUv=uv; gl_Position=projectionMatrix*viewMatrix*w; }` }));
+      ground.rotation.x = -Math.PI / 2; scene3.add(ground);
+      // data centres: instanced boxes that erupt, with glowing window bands and hot roofs
+      const geo = new THREE.BoxGeometry(1, 1, 1); geo.translate(0, .5, 0);
+      bMat = shader(`varying vec3 vL; varying vec3 vN; varying float vS; varying float vRise; uniform float uT;
+void main(){ vec3 base=vec3(.02,.022,.03);
+  float bands=step(.55,fract(vL.y*14.))*step(.08,abs(vN.y-1.));
+  float flick=.7+.3*sin(uT*3.+vS*50.);
+  vec3 col=base+vec3(.25,.7,1.)*bands*.9*flick*vRise;
+  if(vN.y>.5) col=vec3(1.,.55,.2)*1.6*vRise*(.7+.3*sin(uT*1.5+vS*9.));
+  col*=.6+.4*max(dot(vN,normalize(vec3(.4,.8,.3))),0.);
+  gl_FragColor=vec4(col,1.); }`, { uT: { value: 0 }, uRise: { value: 0 } }, { depth: true, vert: `attribute float aSeed; uniform float uT,uRise; varying vec3 vL; varying vec3 vN; varying float vS; varying float vRise; varying vec2 vUv;
+void main(){ float k=clamp((uRise*1.6-aSeed*.6),0.,1.); float e=1.-pow(1.-k,4.); float ov=1.+sin(k*3.14159)*.15;
+  vec3 p=position; p.y*=max(e*ov,.001);
+  vec4 w=modelMatrix*instanceMatrix*vec4(p,1.); vL=position; vN=normalize(mat3(instanceMatrix)*normal); vS=aSeed; vRise=e; vUv=vec2(0.);
+  gl_Position=projectionMatrix*viewMatrix*w; if(e<.01) gl_Position=vec4(2.,2.,2.,1.); }` });
+      blds = new THREE.InstancedMesh(geo, bMat, NB); const seeds = new Float32Array(NB); const M = new THREE.Matrix4();
+      for (let i = 0; i < NB; i++) {
+        const c = clusters[i % CL], a = rr() * 6.283, r = Math.sqrt(rr()) * 38 * c[2];
+        const w = 3 + rr() * 9, d = 3 + rr() * 9, hgt = (6 + rr() * 28) * (1.3 - r / 60) * c[2];
+        M.compose(new THREE.Vector3(c[0] + Math.cos(a) * r, 0, c[1] + Math.sin(a) * r), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), (rr() - .5) * .3), new THREE.Vector3(w, hgt, d));
+        blds.setMatrixAt(i, M); seeds[i] = (i % CL) / CL * .7 + rr() * .3;
+      }
+      geo.setAttribute('aSeed', new THREE.InstancedBufferAttribute(seeds, 1)); blds.frustumCulled = false; scene3.add(blds);
+      // power lines between clusters with travelling pulses
+      const SEG = 40, pl = [], pt = [];
+      for (let i = 0; i < CL; i++) for (let j = i + 1; j < CL; j++) {
+        const A = clusters[i], B = clusters[j], d = Math.hypot(A[0] - B[0], A[1] - B[1]); if (d > 260) continue; const sd = rr();
+        for (let k = 0; k < SEG; k++) for (let e = 0; e < 2; e++) { const t = (k + e) / SEG; pl.push(lerp(A[0], B[0], t), 2 + Math.sin(t * Math.PI) * d * .12, lerp(A[1], B[1], t)); pt.push(t, sd, d); }
+      }
+      const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.Float32BufferAttribute(pl, 3)); lg.setAttribute('aT', new THREE.Float32BufferAttribute(pt, 3));
+      lnMat = shader(`varying float vA; void main(){ gl_FragColor=vec4(vec3(.35,.8,1.)*vA,1.); }`, { uT: { value: 0 }, uOn: { value: 0 } }, { blend: 'add', vert: `attribute vec3 aT; uniform float uT,uOn; varying float vA; varying vec2 vUv;
+void main(){ float ph=fract(uT*.5+aT.y); float pulse=exp(-pow((aT.x-ph)*12.,2.)); vA=uOn*(.12+pulse*2.2)*step(aT.x,uOn*1.2); gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); vUv=vec2(0.); }` });
+      lnMat.depthTest = false; lines = new THREE.LineSegments(lg, lnMat); lines.frustumCulled = false; scene3.add(lines);
+      // lightning: rebuilt every few frames as jagged polylines between cluster tops and the sky
+      boltGeo = new THREE.BufferGeometry(); boltGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6 * 2 * 16 * 3), 3));
+      bolt = new THREE.LineSegments(boltGeo, new THREE.LineBasicMaterial({ color: new THREE.Color(4, 4.5, 6), transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthTest: false }));
+      bolt.frustumCulled = false; scene3.add(bolt);
+      let boltT = 0;
+      function makeBolts() {
+        const a = boltGeo.attributes.position.array; let n = 0;
+        for (let b = 0; b < 6; b++) {
+          const c = clusters[(Math.random() * CL) | 0], top = [c[0] + (Math.random() - .5) * 30, 30 + Math.random() * 20, c[1] + (Math.random() - .5) * 30];
+          let p = [top[0] + (Math.random() - .5) * 60, 260, top[2] + (Math.random() - .5) * 60];
+          for (let s = 0; s < 16; s++) { const t = (s + 1) / 16; const q = [lerp(p[0], top[0], .25) + (Math.random() - .5) * 26 * (1 - t), lerp(p[1], top[1], 1 / (16 - s)), lerp(p[2], top[2], .25) + (Math.random() - .5) * 26 * (1 - t)]; a.set(p, n); a.set(q, n + 3); n += 6; p = q; }
+        }
+        boltGeo.attributes.position.needsUpdate = true;
+      }
+      let flash = 0;
+      return {
+        update(s) {
+          const u = s.p[0] + s.p[1] + s.p[2]; const k = rig(KEYS, u, ['pos', 'look', 'fov']);
+          cam.position.set(k.pos[0] + Math.sin(s.t * .1) * 20 + s.mouse.x * 30, k.pos[1] + s.mouse.y * 20, k.pos[2]); cam.lookAt(...k.look);
+          cam.fov = V.portrait ? k.fov * 1.5 : k.fov; cam.aspect = V.W / V.H; cam.updateProjectionMatrix();
+          ground.material.uniforms.uT.value = s.t; ground.material.uniforms.uPop.value = s.k(0, .2, 2.6); ground.material.uniforms.uGrid.value = s.k(1, 0, 2);
+          bMat.uniforms.uT.value = s.t; bMat.uniforms.uRise.value = s.k(1, .2, 3.6, E.lin);
+          lnMat.uniforms.uT.value = s.t; lnMat.uniforms.uOn.value = s.k(2, 0, 1.5, E.lin);
+          boltT -= s.dt; flash *= Math.exp(-s.dt * 9);
+          if (s.on(2) && boltT <= 0) { makeBolts(); boltT = .12 + Math.random() * .5; if (Math.random() < .5) { flash = 1; AU.hit('snap'); } }
+          bolt.material.opacity = s.on(2) ? flash : 0;
+          s.post = { streak: .5, flare: .2, bloom: .75 + flash * .6, threshold: .8, exposure: 1 + flash * .5, vignette: .55, grain: .035, ca: .0015 + flash * .006, halation: .5 };
+          if (s.cross(1, .3)) AU.hit('riser'); if (s.cross(1, 2.4)) AU.hit('boom'); if (s.cross(2, 0)) AU.hit('sub');
+        },
+        render(slot) { R.setRenderTarget(slot.hdr); R.setClearColor(new THREE.Color(.004, .005, .014), 1); R.clear(); R.render(scene3, cam); },
+        draw2d(g, s) {
+          const W = V.W, H = V.H, k = Math.min(W / 1920, H / 1080) * (V.portrait ? 1.6 : 1), x = (V.portrait ? 60 : 120) * k, y = H * (V.portrait ? .12 : .18);
+          const out = b => s.beat > b ? clamp(s.at(b + 1) / .5) : 0;
+          if (s.beat === 0 || out(0) < 1) {
+            text(g, '1,000,000,000+', { x, y, size: (V.portrait ? 64 : 110) * k, font: 'Unbounded', weight: 800, color: '#ffd36b', track: -.05, anim: 'decode', accent: '#fff', glow: 'rgba(255,170,60,.5)' }, s.k(0, .3, 2.2, E.lin), out(0));
+            text(g, 'people now use AI.', { x, y: y + 80 * k, size: (V.portrait ? 40 : 52) * k, font: 'Unbounded', weight: 300, color: '#fff', anim: 'blur', by: 'word' }, s.k(0, 1.2, 2.6, E.lin), out(0));
+            text(g, 'DataReportal, Digital 2026', { x, y: y + 130 * k, size: 18 * k, font: 'Geist Mono', color: 'rgba(255,255,255,.6)', anim: 'fade' }, s.k(0, 2, 3, E.lin), out(0));
+          }
+          if (s.beat === 1 || (s.beat === 2 && out(1) < 1)) {
+            text(g, 'Supply: ~$700 billion', { x, y, size: (V.portrait ? 50 : 84) * k, font: 'Unbounded', weight: 300, color: '#fff', track: -.035, anim: 'stretch' }, s.k(1, .2, 1.5, E.lin), out(1));
+            text(g, 'of data-centre spending planned for 2026.', { x, y: y + 64 * k, size: 30 * k, font: 'Geist', color: 'rgba(255,255,255,.85)', anim: 'blur', by: 'word' }, s.k(1, .9, 2.2, E.lin), out(1));
+            // two glowing bars: 2025 vs 2026
+            const bw = Math.min(W * .4, 620 * k), by = y + 130 * k, a = s.k(1, 1.3, 3, E.out3) * (1 - out(1));
+            [[2025, 365, '#64d8ff'], [2026, 700, '#ffb347']].forEach(([yr, v, c], i) => {
+              const yy = by + i * 70 * k; g.globalAlpha = Math.min(1, a * 2); g.fillStyle = 'rgba(255,255,255,.65)'; g.font = `500 ${18 * k}px "Geist Mono", monospace`; g.fillText(yr, x, yy + 22 * k);
+              g.save(); g.shadowColor = c; g.shadowBlur = 24 * k; g.fillStyle = c; g.fillRect(x + 80 * k, yy, bw * v / 700 * a, 30 * k); g.restore();
+              g.fillStyle = '#fff'; g.font = `500 ${22 * k}px "Geist Mono", monospace`; g.fillText('$' + Math.round(v * a) + 'B', x + 92 * k + bw * v / 700 * a, yy + 24 * k);
+            });
+            g.globalAlpha = 1;
+            text(g, 'Hyperscaler capex plans; 2025 ≈ $365B. Figures vary by source.', { x, y: by + 170 * k, size: 17 * k, font: 'Geist Mono', color: 'rgba(255,255,255,.55)', anim: 'fade' }, s.k(1, 2.4, 3.4, E.lin), out(1));
+          }
+          if (s.beat === 2) {
+            text(g, 'Measured in\ngigawatts.', { x, y, size: (V.portrait ? 60 : 100) * k, font: 'Unbounded', weight: 800, color: '#bfe9ff', track: -.05, lh: 1, anim: 'glitch', glow: 'rgba(120,200,255,.6)' }, s.k(2, .2, 1.4, E.lin));
+            const L = ['5 GW · one planned Meta campus in Louisiana', '~$50B · rough cost per gigawatt of AI capacity', '23 GW+ · under construction worldwide, late 2025'];
+            L.forEach((l, i) => text(g, l, { x, y: y + (V.portrait ? 150 : 210) * k + i * 42 * k, size: 24 * k, font: 'Geist Mono', weight: 500, color: '#fff', anim: 'decode', accent: '#64d8ff' }, s.k(2, 1.2 + i * .5, 2.6 + i * .5, E.lin)));
+          }
+        },
+      };
+    },
+  });
+}
+
+// ---- 57-exams.js ----
+// =====================================================================
+// 57 · EXAMS — "The tests keep breaking." A paper exam floats in the dark.
+// It gets aced, stamped, then burns from the bottom up (noise threshold,
+// charred edge, glowing embers) to reveal the next, harder test.
+// =====================================================================
+
+{
+  const PW = 1024, PH = 1400;
+  let scene3, cam, page, pMat, embers, eMat, bg, cv = [], tex = [];
+  function paper(g, title, sub) {
+    g.fillStyle = '#f4efe4'; g.fillRect(0, 0, PW, PH);
+    const r = prng(4); for (let i = 0; i < 2400; i++) { g.fillStyle = `rgba(120,100,70,${r() * .05})`; g.fillRect(r() * PW, r() * PH, 2, 2); }
+    g.fillStyle = '#1b1a17'; g.font = '700 54px Geist, Arial'; g.fillText(title, 80, 150); g.font = '400 30px Geist, Arial'; g.fillStyle = '#5b574f'; g.fillText(sub, 80, 200);
+    g.fillStyle = '#c33'; g.fillRect(80, 236, PW - 160, 4);
+  }
+  function scribble(g, x, y, w, seed) { const r = prng(seed); g.strokeStyle = '#2a3f8f'; g.lineWidth = 3; g.beginPath(); g.moveTo(x, y); for (let i = 0; i < 40; i++) g.lineTo(x + i / 40 * w, y + Math.sin(i * 1.7 + r() * 3) * 9 + (r() - .5) * 6); g.stroke(); }
+  function drawIMO(stamp) {
+    const g = cv[0].getContext('2d'); paper(g, 'INTERNATIONAL MATHEMATICAL OLYMPIAD', 'Sunshine Coast, Australia · July 2025 · 6 problems, 42 points');
+    for (let p = 0; p < 6; p++) { const y = 320 + p * 160; g.fillStyle = '#1b1a17'; g.font = '600 32px Geist, Arial'; g.fillText(`Problem ${p + 1}`, 80, y); g.font = '400 26px "Newsreader", Georgia'; g.fillStyle = '#3d3a34'; g.fillText(['Determine all functions f such that ...', 'Let ABC be a triangle with circumcircle ...', 'Prove that for every positive integer n ...', 'A sequence a₁, a₂, ... satisfies ...', 'Alice and Bazza play a game in which ...', 'Find the minimum number of tiles ...'][p], 80, y + 40); for (let l = 0; l < 2; l++) scribble(g, 100, y + 80 + l * 26, 620 - l * 140, p * 7 + l); g.fillStyle = p < 5 ? '#c33' : '#999'; g.font = '700 36px Geist, Arial'; g.fillText(p < 5 ? '7/7' : '0/7', PW - 200, y + 10); }
+    g.fillStyle = '#1b1a17'; g.font = '800 64px Geist, Arial'; g.fillText('35 / 42', 80, PH - 80);
+    if (stamp > 0) { const s = E.outBack(clamp(stamp)); g.save(); g.translate(PW * .62, PH * .78); g.rotate(-.22); g.scale(3 - 2 * s, 3 - 2 * s); g.globalAlpha = Math.min(1, stamp * 2) * .9; g.strokeStyle = '#d4a017'; g.lineWidth = 12; g.strokeRect(-260, -95, 520, 190); g.fillStyle = '#d4a017'; g.font = '800 104px Geist, Arial'; g.textAlign = 'center'; g.fillText('GOLD', 0, 38); g.font = '600 26px Geist, Arial'; g.fillText('MEDAL LEVEL', 0, 78); g.restore(); }
+    tex[0].needsUpdate = true;
+  }
+  function drawHLE(fill, score) {
+    const g = cv[1].getContext('2d'); paper(g, "HUMANITY'S LAST EXAM", '2,500 expert questions · 100+ subjects · built to be AI-proof');
+    const cols = 5, rows = 22, total = cols * rows * 1; let n = 0;
+    for (let c = 0; c < 4; c++) for (let r = 0; r < rows; r++, n++) {
+      const x = 90 + c * 220, y = 300 + r * 44; g.fillStyle = '#6b665c'; g.font = '500 20px "Geist Mono", monospace'; g.fillText(String(n + 1).padStart(3, '0'), x, y + 8);
+      const filled = n / (4 * rows) < fill, pick = (n * 7 + 3) % 5;
+      for (let b = 0; b < 5; b++) { g.beginPath(); g.arc(x + 62 + b * 28, y + 1, 10, 0, 7); g.strokeStyle = '#8a8475'; g.lineWidth = 2; g.stroke(); if (filled && b === pick) { g.fillStyle = '#1b1a17'; g.fill(); } }
+    }
+    g.fillStyle = '#c33'; g.font = '800 120px Geist, Arial'; g.fillText(Math.round(score) + '%', 80, PH - 70); g.fillStyle = '#5b574f'; g.font = '500 26px "Geist Mono", monospace'; g.fillText('TOP AI SCORE', 80, PH - 200);
+    tex[1].needsUpdate = true;
+  }
+  function drawNext() {
+    const g = cv[2].getContext('2d'); paper(g, 'THE NEXT TEST', 'not written yet');
+    g.fillStyle = 'rgba(27,26,23,.08)'; g.font = '800 900px Geist, Arial'; g.textAlign = 'center'; g.fillText('?', PW / 2, PH * .82); g.textAlign = 'left'; tex[2].needsUpdate = true;
+  }
+  SCENES.push({
+    id: 'exams', title: 'The tests keep breaking', enterWith: 'dissolve', hud: { color: '#ffb36b' },
+    beats: [{ dur: 4, hold: 4 }, { dur: 6, hold: 4 }, { dur: 4, hold: 4 }],
+    bed: { chord: [0, 3, 7, 10], oct: 3, cut: 700, vol: .045, level: [.3, .45, .55] },
+    notes: [
+      'July 2025: experimental reasoning models from Google DeepMind and OpenAI each reached gold-medal level at the International Mathematical Olympiad, 35 of 42 points, writing their proofs in natural language.',
+      'Humanity\'s Last Exam was built in late 2024 by thousands of experts to be the hardest closed test there is: 2,500 questions. At launch in January 2025, frontier models scored in single digits. By February 2026 the best reported score was about 48%. Leaderboards disagree on later numbers.',
+      'So the tests keep breaking, and we keep having to write harder ones.',
+    ],
+    create() {
+      for (let i = 0; i < 3; i++) { const c = document.createElement('canvas'); c.width = PW; c.height = PH; cv.push(c); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.NoColorSpace; t.anisotropy = 4; tex.push(t); }
+      scene3 = new THREE.Scene(); cam = new THREE.PerspectiveCamera(32, 1.78, .1, 50);
+      pMat = shader(`varying vec3 vN; uniform sampler2D tA,tB; uniform float uBurn,uT;
+void main(){
+  vec2 uv=vUv;
+  float n=fbm(uv*vec2(3.,4.)+1.7)*.75+uv.y*.45+vnoise(uv*40.)*.05;
+  float th=uBurn*1.35-.12;
+  vec3 A=toLin(texture(tA,uv).rgb), B=toLin(texture(tB,uv).rgb);
+  float light=.62+.2*dot(normalize(vN),normalize(vec3(-.3,.4,1.)));
+  vec3 col;
+  float d=n-th;
+  if(d<0.){ col=B*light*.92; float bed=exp(d*30.); col=mix(col,col*.4,bed*.6); }
+  else { col=A*light; float ch=smoothstep(.09,0.,d); col=mix(col,vec3(.05,.03,.02),ch*.85); }
+  float glow=exp(-abs(d)*70.)*step(.001,uBurn)*step(uBurn,.999);
+  col+=vec3(1.,.42,.08)*glow*1.8+vec3(1.,.85,.5)*exp(-abs(d)*320.)*step(.001,uBurn)*step(uBurn,.999)*2.2;
+  gl_FragColor=vec4(col,1.); }`, { tA: { value: null }, tB: { value: null }, uBurn: { value: 0 }, uT: { value: 0 } },
+        { depth: true, side: THREE.DoubleSide, vert: `varying vec3 vN; varying vec2 vUv; uniform float uT; void main(){ vUv=uv; vec3 p=position; p.z+=sin(p.y*2.+uT)*.015+p.x*p.x*.04; vN=normalMatrix*normal; gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.); }` });
+      page = new THREE.Mesh(new THREE.PlaneGeometry(1, PH / PW, 40, 40), pMat); scene3.add(page);
+      const EN = 1800, ep = new Float32Array(EN * 3); for (let i = 0; i < EN; i++) ep.set([Math.random() - .5, Math.random(), Math.random()], i * 3);
+      const eg = new THREE.BufferGeometry(); eg.setAttribute('position', new THREE.BufferAttribute(ep, 3));
+      eMat = shader(`varying float vA; void main(){ vec2 c=gl_PointCoord-.5; gl_FragColor=vec4(vec3(1.,.5,.12)*exp(-dot(c,c)*30.)*vA*3.,1.); }`, { uT: { value: 0 }, uBurn: { value: 0 }, uPx: { value: 1 } },
+        { blend: 'add', vert: `uniform float uT,uBurn,uPx; varying float vA; varying vec2 vUv;
+void main(){ vec3 s=position; float life=fract(s.y+uT*(.25+s.z*.4)); float y0=uBurn*1.35-.6;
+  vec3 p=vec3(s.x*1.05+sin(uT*2.+s.z*30.)*.05*life, (y0*1.4-.55)+life*1.2*(.4+s.z), .05+s.z*.15);
+  vec4 mv=modelViewMatrix*vec4(p,1.); gl_Position=projectionMatrix*mv; gl_PointSize=clamp(uPx*.004/-mv.z,1.,6.);
+  vA=(1.-life)*step(.01,uBurn)*step(uBurn,.99)*smoothstep(0.,.1,life); vUv=vec2(0.); }` });
+      embers = new THREE.Points(eg, eMat); embers.frustumCulled = false; scene3.add(embers);
+      bg = shader(`uniform float uT,uHeat; void main(){ vec2 p=vUv; float sm=fbm(p*3.+vec2(0.,-uT*.08))*fbm(p*6.-uT*.05);
+        vec3 c=vec3(.025,.012,.01)+vec3(.35,.12,.03)*sm*.5+vec3(1.,.35,.06)*uHeat*exp(-p.y*3.)*.25*(.6+.4*sm); gl_FragColor=vec4(c,1.); }`, { uT: { value: 0 }, uHeat: { value: 0 } });
+      let lastFill = -1, lastSt = -1, lastKey = '';
+      return {
+        init() { drawIMO(0); drawHLE(0, 3); drawNext(); },
+        update(s) {
+          const st = s.k(0, 1.4, 2.2, E.lin); if (st !== lastSt) { lastSt = st; drawIMO(st); }
+          const b1 = s.on(1) ? clamp(s.at(1) / 1.8) : 0, b2 = s.on(2) ? clamp(s.at(2) / 1.8) : 0;
+          const fill = s.k(1, 1.6, 5.2, E.lin); const sc = lerp(3, 48, s.k(1, 1.6, 5.4, E.io2)); if (Math.round(sc) !== lastFill) { lastFill = Math.round(sc); if (s.on(1) && fill < 1) AU.hit('tick'); }
+          const key = Math.round(fill * 88) + '|' + Math.round(sc); if (key !== lastKey) { lastKey = key; drawHLE(fill, sc); }
+          const u = pMat.uniforms; u.uT.value = s.t;
+          if (s.on(2)) { u.tA.value = tex[1]; u.tB.value = tex[2]; u.uBurn.value = b2; } else { u.tA.value = tex[0]; u.tB.value = tex[1]; u.uBurn.value = b1; }
+          eMat.uniforms.uT.value = s.t; eMat.uniforms.uBurn.value = u.uBurn.value; eMat.uniforms.uPx.value = V.H;
+          bg.uniforms.uT.value = s.t; bg.uniforms.uHeat.value = Math.sin(Math.PI * u.uBurn.value);
+          const ox = V.portrait ? 0 : .52, oy = V.portrait ? -.28 : -.02;
+          page.position.set(ox, oy + Math.sin(s.t * .8) * .02, 0); page.rotation.set(-.08 + Math.sin(s.t * .5) * .03, V.portrait ? 0 : -.38 + s.mouse.x * .15, .03 * Math.sin(s.t * .4));
+          embers.position.copy(page.position); embers.rotation.copy(page.rotation);
+          cam.position.set(0, 0, V.portrait ? 3.6 : 2.6); cam.lookAt(0, 0, 0); cam.aspect = V.W / V.H; cam.updateProjectionMatrix();
+          s.post = { bloom: .5, threshold: 1.4, exposure: .92, vignette: .55, grain: .04, ca: .0015, halation: .6, streak: .1 };
+          if (s.cross(0, 1.4)) AU.hit('slam'); if (s.cross(1, .05) || s.cross(2, .05)) AU.hit('wave');
+        },
+        render(slot) { pass(bg, slot.hdr); R.setRenderTarget(slot.hdr); R.render(scene3, cam); },
+        draw2d(g, s) {
+          const W = V.W, H = V.H, k = Math.min(W / 1920, H / 1080) * (V.portrait ? 1.6 : 1), x = (V.portrait ? 60 : 120) * k, y = H * (V.portrait ? .1 : .3);
+          const out = b => s.beat > b ? clamp(s.at(b + 1) / .5) : 0, mw = V.portrait ? W - 2 * x : W * .42;
+          if (s.beat === 0 || out(0) < 1) { text(g, 'Gold at the\nMath Olympiad.', { x, y, size: (V.portrait ? 54 : 78) * k, font: 'Unbounded', weight: 300, color: '#fff', track: -.035, lh: 1.06, anim: 'rise', maxW: mw }, s.k(0, .2, 1.4, E.lin), out(0)); text(g, 'July 2025 · experimental models from Google DeepMind and OpenAI · 35 / 42', { x, y: y + 190 * k, size: 20 * k, font: 'Geist Mono', color: 'rgba(255,220,180,.75)', anim: 'fade', maxW: mw }, s.k(0, 1.2, 2.2, E.lin), out(0)); }
+          if (s.beat === 1 || (s.beat === 2 && out(1) < 1)) { text(g, 'Humanity’s\nLast Exam.', { x, y, size: (V.portrait ? 54 : 78) * k, font: 'Unbounded', weight: 300, color: '#fff', track: -.035, lh: 1.06, anim: 'decode', accent: '#ff9a3c', maxW: mw }, s.k(1, 1, 2.4, E.lin), out(1)); text(g, 'Single digits at launch (Jan 2025). ~48% a year later (Feb 2026).', { x, y: y + 190 * k, size: 20 * k, font: 'Geist Mono', color: 'rgba(255,220,180,.75)', anim: 'fade', maxW: mw }, s.k(1, 2.4, 3.4, E.lin), out(1)); }
+          if (s.beat === 2) text(g, 'So we keep\nwriting harder\ntests.', { x, y, size: (V.portrait ? 54 : 78) * k, font: 'Unbounded', weight: 300, color: '#fff', track: -.035, lh: 1.06, anim: 'neon', glow: 'rgba(255,140,60,.6)', maxW: mw }, s.k(2, 1.6, 2.8, E.lin));
         },
       };
     },
@@ -2295,7 +2356,7 @@ void main(){ vec2 p=(vUv-.5)*vec2(uAsp,1.);
     bed: { chord: [0, 4, 7, 14], oct: 3, cut: 1000, vol: .05, level: [.6, .4] },
     notes: [
       'If it goes well, the most precious thing it gives us back is time. So: what will you do with it?',
-      'Sources: METR time-horizon research (2025–2026); Anthropic, September 2026 report on AI-led R&D; OpenAI, September 2026 Navier–Stokes announcement (under review); Alpöge and Claude, Lean proof of the Riemann hypothesis (Nov 2026); Dario Amodei, “Machines of Loving Grace” (2024); I. J. Good (1965).',
+      'Sources: Metaculus community forecasts and AI Impacts expert surveys; DataReportal Digital 2026; hyperscaler 2026 capex guidance and BloombergNEF; IMO 2025 gold-level results; Humanity\'s Last Exam leaderboards; METR time-horizon research (2025–2026); Anthropic, September 2026 report on AI-led R&D; OpenAI, September 2026 Navier–Stokes announcement (under review); Alpöge and Claude, Lean proof of the Riemann hypothesis (Nov 2026); Dario Amodei, “Machines of Loving Grace” (2024); I. J. Good (1965).',
     ],
     create() {
       return {
@@ -2305,8 +2366,8 @@ void main(){ vec2 p=(vUv-.5)*vec2(uAsp,1.);
           const W = V.W, H = V.H, k = Math.min(W / 1920, H / 1080) * (V.portrait ? 1.6 : 1);
           text(g, 'What will you do\nwith the time?', { x: W / 2, y: H * .45, size: (V.portrait ? 80 : 150) * k, font: 'Newsreader', italic: true, weight: 400, color: '#fbf6ec', align: 'center', valign: 'middle', track: -.02, lh: 1.02, anim: 'blur', by: 'word', stagger: .6 }, s.k(0, 1.2, 4.2, E.lin), s.on(1) ? clamp(s.at(1) / .8) * .0 : 0);
           if (s.on(1)) {
-            const src = ['METR · time-horizon research, 2025–2026', 'Anthropic · AI-led R&D report, September 2026 (self-reported)', 'OpenAI · Navier–Stokes announcement, September 2026 (under review)', 'L. Alpöge with Claude · Lean proof of the Riemann hypothesis, November 2026', 'Dario Amodei · “Machines of Loving Grace”, 2024', 'I. J. Good · “Speculations Concerning the First Ultraintelligent Machine”, 1965'];
-            src.forEach((l, i) => text(g, l, { x: W / 2, y: H * .74 + i * 30 * k, size: 19 * k, font: 'Geist Mono', weight: 400, color: 'rgba(251,246,236,.6)', align: 'center', anim: 'fade' }, s.k(1, .2 + i * .15, 1 + i * .15, E.lin)));
+            const src = ['Metaculus community forecasts (2020; Feb 2026) · AI Impacts expert surveys (2022, 2023)', 'METR · time-horizon research, 2025–2026', 'Anthropic · AI-led R&D report, September 2026 (self-reported)', 'DataReportal Digital 2026 · hyperscaler capex plans 2026 (company guidance, BNEF)', 'IMO 2025 gold-level results (Google DeepMind, OpenAI) · Humanity’s Last Exam leaderboards', 'OpenAI Navier–Stokes (under review) · Alpöge & Claude, Lean proof of RH (Nov 2026)', 'Dario Amodei · “Machines of Loving Grace”, 2024'];
+            src.forEach((l, i) => text(g, l, { x: W / 2, y: H * .7 + i * 28 * k, size: 19 * k, font: 'Geist Mono', weight: 400, color: 'rgba(251,246,236,.6)', align: 'center', anim: 'fade' }, s.k(1, .2 + i * .15, 1 + i * .15, E.lin)));
           }
         },
       };

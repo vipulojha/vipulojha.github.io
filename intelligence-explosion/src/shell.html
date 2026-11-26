@@ -44,6 +44,7 @@ body.idle .ui.auto{opacity:0;pointer-events:none}
 #bar button{min-width:44px;height:44px;border:0;border-radius:10px;background:transparent;color:#fff;font:500 13px "Geist Mono",monospace;cursor:pointer;padding:0 10px}
 #bar button:hover,#bar button.on{background:rgba(255,255,255,.12)}
 #bar button:focus-visible{outline:2px solid #2b5cff}
+@media (max-width:700px){#bar{bottom:auto;top:10px;gap:2px;padding:4px;transform:translateX(-50%) scale(.9)}#bar button{min-width:34px;height:38px;padding:0 6px;font-size:12px}}
 #notes{left:0;right:0;bottom:0;padding:16px 28px 84px;background:linear-gradient(transparent,rgba(0,0,0,.86) 30%);font:17px/1.5 Geist,sans-serif;display:none}
 #notes.on{display:block}
 #notes .meta{font:500 12px "Geist Mono",monospace;opacity:.6;margin-bottom:6px;letter-spacing:.04em}

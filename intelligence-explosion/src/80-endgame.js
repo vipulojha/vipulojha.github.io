@@ -158,7 +158,7 @@ void main(){ vec2 p=(vUv-.5)*vec2(uAsp,1.);
     bed: { chord: [0, 4, 7, 14], oct: 3, cut: 1000, vol: .05, level: [.6, .4] },
     notes: [
       'If it goes well, the most precious thing it gives us back is time. So: what will you do with it?',
-      'Sources: METR time-horizon research (2025–2026); Anthropic, September 2026 report on AI-led R&D; OpenAI, September 2026 Navier–Stokes announcement (under review); Alpöge and Claude, Lean proof of the Riemann hypothesis (Nov 2026); Dario Amodei, “Machines of Loving Grace” (2024); I. J. Good (1965).',
+      'Sources: Metaculus community forecasts and AI Impacts expert surveys; DataReportal Digital 2026; hyperscaler 2026 capex guidance and BloombergNEF; IMO 2025 gold-level results; Humanity\'s Last Exam leaderboards; METR time-horizon research (2025–2026); Anthropic, September 2026 report on AI-led R&D; OpenAI, September 2026 Navier–Stokes announcement (under review); Alpöge and Claude, Lean proof of the Riemann hypothesis (Nov 2026); Dario Amodei, “Machines of Loving Grace” (2024); I. J. Good (1965).',
     ],
     create() {
       return {
@@ -168,8 +168,8 @@ void main(){ vec2 p=(vUv-.5)*vec2(uAsp,1.);
           const W = V.W, H = V.H, k = Math.min(W / 1920, H / 1080) * (V.portrait ? 1.6 : 1);
           text(g, 'What will you do\nwith the time?', { x: W / 2, y: H * .45, size: (V.portrait ? 80 : 150) * k, font: 'Newsreader', italic: true, weight: 400, color: '#fbf6ec', align: 'center', valign: 'middle', track: -.02, lh: 1.02, anim: 'blur', by: 'word', stagger: .6 }, s.k(0, 1.2, 4.2, E.lin), s.on(1) ? clamp(s.at(1) / .8) * .0 : 0);
           if (s.on(1)) {
-            const src = ['METR · time-horizon research, 2025–2026', 'Anthropic · AI-led R&D report, September 2026 (self-reported)', 'OpenAI · Navier–Stokes announcement, September 2026 (under review)', 'L. Alpöge with Claude · Lean proof of the Riemann hypothesis, November 2026', 'Dario Amodei · “Machines of Loving Grace”, 2024', 'I. J. Good · “Speculations Concerning the First Ultraintelligent Machine”, 1965'];
-            src.forEach((l, i) => text(g, l, { x: W / 2, y: H * .74 + i * 30 * k, size: 19 * k, font: 'Geist Mono', weight: 400, color: 'rgba(251,246,236,.6)', align: 'center', anim: 'fade' }, s.k(1, .2 + i * .15, 1 + i * .15, E.lin)));
+            const src = ['Metaculus community forecasts (2020; Feb 2026) · AI Impacts expert surveys (2022, 2023)', 'METR · time-horizon research, 2025–2026', 'Anthropic · AI-led R&D report, September 2026 (self-reported)', 'DataReportal Digital 2026 · hyperscaler capex plans 2026 (company guidance, BNEF)', 'IMO 2025 gold-level results (Google DeepMind, OpenAI) · Humanity’s Last Exam leaderboards', 'OpenAI Navier–Stokes (under review) · Alpöge & Claude, Lean proof of RH (Nov 2026)', 'Dario Amodei · “Machines of Loving Grace”, 2024'];
+            src.forEach((l, i) => text(g, l, { x: W / 2, y: H * .7 + i * 28 * k, size: 19 * k, font: 'Geist Mono', weight: 400, color: 'rgba(251,246,236,.6)', align: 'center', anim: 'fade' }, s.k(1, .2 + i * .15, 1 + i * .15, E.lin)));
           }
         },
       };

@@ -24,7 +24,7 @@ import { SCENES, THREE, R, clamp, lerp, E, prng, shader, pass, V, text, samplePo
     notes: [
       'Lights down. One point of light, so dense it bends the stars behind it.',
       'Then it goes. Everything that follows in this talk is what happens after that moment.',
-      'But first, the way these talks usually start.',
+      'So let\'s start with the people whose job is to see it coming.',
     ],
     create(ctx, s) {
       scene3 = new THREE.Scene(); cam = new THREE.PerspectiveCamera(42, 1.78, .01, 100);
@@ -114,7 +114,7 @@ void main(){ vec2 p=(vUv-.5)*vec2(uAsp,1.); float r=length(p);
           if (s.on(1) && !s.on(2)) {
             text(g, 'What happens when minds start building better minds.', { x: W / 2, y: H * (V.portrait ? .76 : .86), size: (V.portrait ? 30 : 30) * k, font: 'Newsreader', italic: true, color: '#f2ecff', align: 'center', anim: 'blur', by: 'word', maxW: W * .86 }, s.k(1, 6.8, 9, E.lin));
           }
-          if (s.on(2)) text(g, 'But first, a slide.', { x: W / 2, y: H * .52, size: (V.portrait ? 46 : 64) * k, font: 'Unbounded', weight: 300, color: '#fff', align: 'center', valign: 'middle', track: -.03, anim: 'glitch' }, s.k(2, .9, 1.6, E.lin), s.k(2, 2.1, 2.5, E.lin));
+          if (s.on(2)) text(g, 'How close is it?', { x: W / 2, y: H * .52, size: (V.portrait ? 46 : 64) * k, font: 'Unbounded', weight: 300, color: '#fff', align: 'center', valign: 'middle', track: -.03, anim: 'glitch' }, s.k(2, .9, 1.6, E.lin), s.k(2, 2.1, 2.5, E.lin));
         },
       };
     },

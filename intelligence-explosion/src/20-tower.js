@@ -36,18 +36,18 @@ import { SCENES, THREE, R, clamp, lerp, E, rig, shader, pass, V, text, AU } from
   const TIP = [[0, 2], [.5, 40], [1, 147], [1.5, 330], [2, Y(17.4)], [2.6, 2400], [3, TOP], [4, TOP]];
   const tipAt = u => { for (let i = 0; i < TIP.length - 1; i++) if (u <= TIP[i + 1][0]) { const t = E.io2((u - TIP[i][0]) / (TIP[i + 1][0] - TIP[i][0])); return Math.exp(lerp(Math.log(TIP[i][1]), Math.log(TIP[i + 1][1]), t)); } return TOP; };
   const LINES = [
-    ['Then it left the slide.', 'Task length AI agents can finish on their own · METR'],
+    ['This is the line that moved them.', 'Task length AI agents can finish on their own · METR'],
     ['Doubling every 3.6 months.', 'METR, November 2026 · combined task suites, 50% success'],
     ['~200 hours by mid-2027.\nIf the trend just holds.', 'Dashed line: extrapolation. METR says estimates above ~16 hours are unreliable.'],
     ['Everything before 2025\nis down here.', 'GPT-4 managed five minutes. Each sheet of paper is one hour.'],
   ];
 
   SCENES.push({
-    id: 'tower', title: 'The real chart', enterWith: 'portal', hud: { color: '#ffffff' },
+    id: 'tower', title: 'The line that moved them', enterWith: 'portal', hud: { color: '#ffffff' },
     beats: [{ dur: 6, hold: 2 }, { dur: 7, hold: 2 }, { dur: 8, hold: 2 }, { dur: 5, hold: 3 }],
     bed: { chord: [0, 4, 7, 11], oct: 3, cut: 700, vol: .05, level: [.35, .45, .6, .4] },
     notes: [
-      'This is METR\'s measurement: how long a task, measured in human time, an AI agent can finish on its own half the time. One sheet of paper here is one hour. The line left the slide in late 2025.',
+      'This is METR\'s measurement: how long a task, measured in human time, an AI agent can finish on its own half the time. One sheet of paper here is one hour. This is the curve the forecasters were reacting to.',
       'Across METR\'s combined task suites the doubling time is about 3.6 months. Claude Mythos Preview was estimated at roughly 17 hours, with a very wide error bar (8.5 to 55 hours).',
       'Extrapolate the trend and you reach about 200 hours, five work weeks, by mid-2027. That is an extrapolation, not a forecast, and METR warns its estimates above ~16 hours are unreliable.',
       'Look down. GPT-4, the model that shocked everyone in 2023, sits at five minutes. Everything before 2025 is a smudge at the bottom of the tower.',
