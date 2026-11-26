@@ -20,7 +20,7 @@ import { SCENES, THREE, R, clamp, lerp, E, prng, shader, pass, V, text, samplePo
   SCENES.push({
     id: 'intro', title: 'Cold open', enterWith: 'fade', hud: { hidden: true },
     beats: [{ dur: 4.5, hold: 2 }, { dur: 8, hold: 4 }, { dur: 2.6, hold: 1.5 }],
-    bed: { chord: [0, 7, 12], oct: 2, cut: 380, vol: .07, level: [.35, .55, .25] },
+    bed: { chord: [0, 7, 12], oct: 2, cut: 300, vol: .055, sub: .2, noise: { brown: true, type: 'lowpass', freq: 180, vol: .3, wobble: .05 }, pulse: { kind: 'heart', rate: .8, vol: .55 }, level: [.55, .65, .35] },
     notes: [
       'Lights down. One point of light, so dense it bends the stars behind it.',
       'Then it goes. Everything that follows in this talk is what happens after that moment.',
@@ -103,6 +103,8 @@ void main(){ vec2 p=(vUv-.5)*vec2(uAsp,1.); float r=length(p);
           s.post = { streak: .6, flare: V.portrait ? .12 : .3, bloom: .55, threshold: 1.1, exposure: 1, vignette: .55, grain: .035, ca: .0025 + (s.on(1) ? Math.exp(-b * 3) * .02 : 0), halation: .5 };
           if (s.cross(0, .3)) AU.hit('sub'); if (s.cross(1, 0)) { AU.hit('boom'); AU.hit('slam'); } if (s.cross(1, .4)) AU.hit('shimmer'); if (s.cross(1, 3.2)) AU.hit('riser'); if (s.cross(1, 6.6)) AU.hit('bell');
           if (s.cross(2, 1.2)) AU.hit('whoosh');
+          if (s.cross(1, 0)) AU.hit('shatter'); if (s.cross(1, 3.6)) AU.hit('sparkle'); if (s.cross(1, 6.2)) AU.hit('choir'); if (s.cross(2, .9)) AU.hit('glitch'); if (s.cross(0, 1.2)) AU.hit('glitch');
+          if (s.bed) { s.bed.param('pulseRate', s.on(1) ? 0 : Math.min(1.6, .75 + s.at(0) * .08)); s.bed.param('noise', s.on(1) ? .12 : .3); }
         },
         render(slot) { pass(bg, slot.hdr); if (titleReady) { R.setRenderTarget(slot.hdr); R.render(scene3, cam); } },
         draw2d(g, s) {

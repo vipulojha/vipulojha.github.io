@@ -54,7 +54,8 @@ const scenes = SCENES.map((def, idx) => {
     on(i) { return this.beat >= i; },
   };
   const hooks = def.create(ctxObj, s) || {};
-  return { def, s, hooks, bed: def.bed ? new AU.Bed(def.bed) : null, thumb: null };
+  const bed = def.bed ? new AU.Bed(def.bed) : null; s.bed = bed;
+  return { def, s, hooks, bed, thumb: null };
 });
 
 let cur = 0, tr = null, black = false, auto = false, tNow = 0;
@@ -113,6 +114,7 @@ function enterScene(i, atEnd, dir) {
   sc.hooks.enter && sc.hooks.enter(s, atEnd);
   if (sc.bed) sc.bed.set(sc.def.bed.level?.[s.beat] ?? .5, sc.def.bed.cut);
 }
+AU.onInit = () => { const sc = scenes[cur]; if (sc && sc.bed) sc.bed.set(sc.def.bed.level?.[sc.s.beat] ?? .5); };
 function exitScene(i) { const sc = scenes[i]; sc.hooks.exit && sc.hooks.exit(sc.s); if (sc.bed) sc.bed.set(0); }
 function goScene(i, dir) {
   if (i < 0 || i >= scenes.length || tr) return;
@@ -216,6 +218,7 @@ addEventListener('keydown', e => {
 });
 let idleT = 0; const wake = () => { document.body.classList.remove('idle'); idleT = 0; };
 let sx0 = null, sy0 = 0, swiped = false;
+addEventListener('touchend', () => AU.init(), { passive: true });
 canvas2.addEventListener('pointerdown', e => { AU.init(); sx0 = e.clientX; sy0 = e.clientY; swiped = false; mouse.down = true; });
 addEventListener('pointerup', e => {
   mouse.down = false;
@@ -291,6 +294,6 @@ async function boot() {
   cur = 0; jump(0); routeHash();
   $('load').classList.add('gone'); setTimeout(() => $('load').remove(), 700);
   last = performance.now(); requestAnimationFrame(frame);
-  window.__deck = { next, back, jump, scenes, get cur() { return cur; }, get tr() { return tr; } };
+  window.__deck = { AU, next, back, jump, scenes, get cur() { return cur; }, get tr() { return tr; } };
 }
 boot();

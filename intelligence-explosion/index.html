@@ -441,90 +441,228 @@ function samplePoints(c, n, seed = 1) {
 }
 
 // ---------- AUDIO: procedural, just intonation on D1 ----------
+// Everything is synthesised live: no audio files. Signal flow:
+//   voices → dry / hall reverb / room reverb / ping-pong delay → compressor → soft clip → master
+// Beds are per-slide soundscapes (pads, choir, sub, noise texture, hum, arpeggio, pulse) that start
+// when a slide is entered and are torn down after they fade out, so idle slides cost nothing.
 const AU = (() => {
   const BASE = 36.7, DEG = [1, 9 / 8, 5 / 4, 11 / 8, 3 / 2, 27 / 16, 15 / 8];
   const note = (d, o = 3) => { const i = ((d % 7) + 7) % 7, oo = o + Math.floor(d / 7); return BASE * DEG[i] * 2 ** oo; };
-  let ac = null, master, comp, hall, room, dry, muted = false, lastHit = {}, noiseBuf = null;
-  const beds = [];
+  let ac = null, master, comp, hall, room, dry, dly, ana, muted = false, lastHit = {}, noiseBuf = null, brownBuf = null, unlockEl = null, onInit = null, sched = null;
+  const beds = new Set();
+  // --- iOS: a looping silent <audio> switches the audio session to "playback" so the silent switch doesn't mute Web Audio
+  function silentWav() {
+    const n = 8000, b = new ArrayBuffer(44 + n), v = new DataView(b), w = (o, s) => [...s].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+    w(0, 'RIFF'); v.setUint32(4, 36 + n, true); w(8, 'WAVEfmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, 8000, true); v.setUint32(28, 8000, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true); w(36, 'data'); v.setUint32(40, n, true);
+    for (let i = 0; i < n; i++) v.setUint8(44 + i, 128);
+    return URL.createObjectURL(new Blob([b], { type: 'audio/wav' }));
+  }
+  function unlock() {
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { }
+    try { if (!unlockEl) { unlockEl = new Audio(silentWav()); unlockEl.loop = true; unlockEl.setAttribute('playsinline', ''); } if (unlockEl.paused) unlockEl.play().catch(() => { }); } catch (e) { }
+  }
   function irBuf(sec, damp) {
-    const len = ac.sampleRate * sec, b = ac.createBuffer(2, len, ac.sampleRate);
-    for (let ch = 0; ch < 2; ch++) { const d = b.getChannelData(ch); let lp = 0; for (let i = 0; i < len; i++) { const t = i / len; lp += (Math.random() * 2 - 1 - lp) * (1 - damp * t); d[i] = lp * (1 - t) ** 2.6; } }
+    const len = Math.floor(ac.sampleRate * sec), b = ac.createBuffer(2, len, ac.sampleRate);
+    for (let ch = 0; ch < 2; ch++) { const d = b.getChannelData(ch); let lp = 0; for (let i = 0; i < len; i++) { const t = i / len; lp += (Math.random() * 2 - 1 - lp) * (1 - damp * t); d[i] = lp * (1 - t) ** 2.6 * (i < 40 ? i / 40 : 1); } }
     return b;
   }
   function init() {
-    if (ac) { if (ac.state === 'suspended') ac.resume(); return; }
-    try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return; }
-    comp = ac.createDynamicsCompressor(); comp.threshold.value = -15; comp.knee.value = 10; comp.ratio.value = 5;
-    const shaper = ac.createWaveShaper(); const curve = new Float32Array(1024); for (let i = 0; i < 1024; i++) { const x = i / 511.5 - 1; curve[i] = Math.tanh(x * 1.2); } shaper.curve = curve;
-    master = ac.createGain(); master.gain.value = muted ? 0 : .8;
-    comp.connect(shaper); shaper.connect(master); master.connect(ac.destination);
+    unlock();
+    if (ac) { if (ac.state !== 'running') ac.resume().catch(() => { }); return; }
+    try { ac = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' }); } catch (e) { ac = null; return; }
+    comp = ac.createDynamicsCompressor(); comp.threshold.value = -15; comp.knee.value = 10; comp.ratio.value = 5; comp.attack.value = .004; comp.release.value = .2;
+    const shaper = ac.createWaveShaper(); const curve = new Float32Array(1024); for (let i = 0; i < 1024; i++) { const x = i / 511.5 - 1; curve[i] = Math.tanh(x * 1.15); } shaper.curve = curve;
+    master = ac.createGain(); master.gain.value = muted ? 0 : .85;
+    ana = ac.createAnalyser(); ana.fftSize = 1024;
+    comp.connect(shaper); shaper.connect(master); master.connect(ac.destination); master.connect(ana);
     dry = ac.createGain(); dry.connect(comp);
     hall = ac.createConvolver(); hall.buffer = irBuf(4.6, .9); const hg = ac.createGain(); hg.gain.value = .5; hall.connect(hg); hg.connect(comp);
     room = ac.createConvolver(); room.buffer = irBuf(.55, .5); const rg = ac.createGain(); rg.gain.value = .35; room.connect(rg); rg.connect(comp);
-    noiseBuf = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate); const nd = noiseBuf.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
-    beds.forEach(b => b._start && b._start());
+    // ping-pong delay (dotted eighth at ~92 bpm), darkened in the feedback loop
+    dly = ac.createGain(); const dl = ac.createDelay(2), drr = ac.createDelay(2), fb = ac.createGain(), lp = ac.createBiquadFilter(), pl = ac.createStereoPanner(), pr = ac.createStereoPanner();
+    dl.delayTime.value = .49; drr.delayTime.value = .49; fb.gain.value = .38; lp.type = 'lowpass'; lp.frequency.value = 2800; pl.pan.value = -.7; pr.pan.value = .7;
+    dly.connect(dl); dl.connect(lp); lp.connect(drr); drr.connect(fb); fb.connect(dl); dl.connect(pl); drr.connect(pr); pl.connect(comp); pr.connect(comp);
+    const sr = ac.sampleRate;
+    noiseBuf = ac.createBuffer(1, sr * 2, sr); const nd = noiseBuf.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+    brownBuf = ac.createBuffer(1, sr * 4, sr); const bd = brownBuf.getChannelData(0); let last = 0; for (let i = 0; i < bd.length; i++) { last = (last + .02 * (Math.random() * 2 - 1)) / 1.02; bd[i] = last * 3.5; }
+    sched = setInterval(tick, 40);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden && ac && ac.state !== 'running') ac.resume().catch(() => { }); });
+    if (onInit) try { onInit(); } catch (e) { }
   }
-  const out = (g, wet = .3, rv = 'hall') => { g.connect(dry); if (wet > 0) { const w = ac.createGain(); w.gain.value = wet; g.connect(w); w.connect(rv === 'room' ? room : hall); } };
+  // ---------- routing + primitive voices ----------
+  const out = (g, wet = .3, rv = 'hall', delay = 0, pan = 0) => {
+    let node = g; if (pan) { const p = ac.createStereoPanner(); p.pan.value = pan; g.connect(p); node = p; }
+    node.connect(dry);
+    if (wet > 0) { const w = ac.createGain(); w.gain.value = wet; node.connect(w); w.connect(rv === 'room' ? room : hall); }
+    if (delay > 0) { const d = ac.createGain(); d.gain.value = delay; node.connect(d); d.connect(dly); }
+  };
   function env(g, t, a, peak, d) { g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(peak, t + a); g.gain.exponentialRampToValueAtTime(1e-4, t + a + d); }
-  function osc(type, f, t, dur, peak, a = .005, wet = .3, f2 = null, rv) {
-    if (f > 18000) return; const o = ac.createOscillator(), g = ac.createGain(); o.type = type; o.frequency.setValueAtTime(f, t);
-    if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur); env(g, t, a, peak, dur); o.connect(g); out(g, wet, rv); o.start(t); o.stop(t + a + dur + .05);
+  function osc(type, f, t, dur, peak, a = .005, wet = .3, f2 = null, rv, delay = 0, pan = 0) {
+    if (f > 18000 || f <= 0) return;
+    const o = ac.createOscillator(), g = ac.createGain(); o.type = type; o.frequency.setValueAtTime(f, t);
+    if (f2) o.frequency.exponentialRampToValueAtTime(Math.max(1, f2), t + a + dur);
+    env(g, t, a, peak, dur); o.connect(g); out(g, wet, rv, delay, pan); o.start(t); o.stop(t + a + dur + .05);
   }
-  function noise(t, dur, peak, type = 'bandpass', f = 2000, q = 1, f2 = null, wet = .2, a = .003, rv) {
-    const s = ac.createBufferSource(); s.buffer = noiseBuf; s.playbackRate.value = .5 + Math.random();
-    const fl = ac.createBiquadFilter(); fl.type = type; fl.frequency.setValueAtTime(f, t); fl.Q.value = q; if (f2) fl.frequency.exponentialRampToValueAtTime(f2, t + dur);
-    const g = ac.createGain(); env(g, t, a, peak, dur); s.connect(fl); fl.connect(g); out(g, wet, rv); s.start(t, Math.random()); s.stop(t + a + dur + .05);
+  function noise(t, dur, peak, type = 'bandpass', f = 2000, q = 1, f2 = null, wet = .2, a = .003, rv, buf, delay = 0, pan = 0) {
+    const s = ac.createBufferSource(); s.buffer = buf || noiseBuf; s.playbackRate.value = .6 + Math.random() * .8;
+    const fl = ac.createBiquadFilter(); fl.type = type; fl.frequency.setValueAtTime(f, t); fl.Q.value = q; if (f2) fl.frequency.exponentialRampToValueAtTime(f2, t + a + dur);
+    const g = ac.createGain(); env(g, t, a, peak, dur); s.connect(fl); fl.connect(g); out(g, wet, rv, delay, pan); s.start(t, Math.random() * .5); s.stop(t + a + dur + .05);
   }
+  function fm(f, ratio, index, t, dur, peak, wet = .5, delay = .2, pan = 0) {
+    if (f > 16000) return;
+    const c = ac.createOscillator(), m = ac.createOscillator(), mg = ac.createGain(), g = ac.createGain();
+    c.frequency.value = f; m.frequency.value = Math.min(f * ratio, 18000); mg.gain.setValueAtTime(f * index, t); mg.gain.exponentialRampToValueAtTime(f * index * .02 + 1, t + dur);
+    m.connect(mg); mg.connect(c.frequency); c.connect(g); env(g, t, .002, peak, dur); out(g, wet, 'hall', delay, pan);
+    c.start(t); m.start(t); c.stop(t + dur + .1); m.stop(t + dur + .1);
+  }
+  function pluck(f, t, dur, peak, wet = .35, delay = .25, pan = 0) {
+    if (f > 12000) return;
+    const g = ac.createGain(), fl = ac.createBiquadFilter(); fl.type = 'lowpass'; fl.Q.value = 2; fl.frequency.setValueAtTime(Math.min(f * 8, 18000), t); fl.frequency.exponentialRampToValueAtTime(f * 1.2, t + dur * .6);
+    for (const [ty, det, v] of [['triangle', 1, 1], ['sine', 2, .35], ['triangle', 1.003, .6]]) { if (f * det > 18000) continue; const o = ac.createOscillator(); o.type = ty; o.frequency.value = f * det; const og = ac.createGain(); og.gain.value = v; o.connect(og); og.connect(fl); o.start(t); o.stop(t + dur + .1); }
+    fl.connect(g); env(g, t, .003, peak, dur); out(g, wet, 'hall', delay, pan);
+  }
+  // ---------- the sound library ----------
+  const R_ = () => Math.random();
   const HITS = {
     tick: t => noise(t, .02, .25, 'highpass', 5000, .7, null, .05, .001, 'room'),
     click: t => { noise(t, .03, .4, 'bandpass', 3500, 2, null, .1, .001, 'room'); osc('sine', 1800, t, .02, .1, .001, .05); },
-    type: t => { noise(t, .035, .35, 'bandpass', 2200 + Math.random() * 1800, 3, null, .08, .001, 'room'); osc('square', 140 + Math.random() * 40, t, .02, .05, .001, 0); },
+    type: t => { noise(t, .035, .35, 'bandpass', 2200 + R_() * 1800, 3, null, .08, .001, 'room'); osc('square', 140 + R_() * 40, t, .02, .05, .001, 0); },
     select: t => { osc('sine', note(4, 6), t, .22, .12, .004, .3); osc('sine', note(1, 7), t + .06, .3, .1, .004, .3); },
     delete: t => { osc('triangle', note(2, 6), t, .09, .12, .002, .1, note(0, 5)); noise(t, .05, .12, 'highpass', 3000, 1, null, .05); },
-    whoosh: t => noise(t, .7, .35, 'bandpass', 300, 1.2, 3500, .35, .25),
+    whoosh: t => { noise(t, .8, .4, 'bandpass', 250, 1.3, 4200, .4, .3); noise(t + .05, .7, .15, 'highpass', 3000, .7, 9000, .3, .35, 'hall', null, 0, .4); },
     thud: t => { osc('sine', 90, t, .4, .5, .003, .2, 40); noise(t, .12, .2, 'lowpass', 400, 1, null, .1); },
     snap: t => { noise(t, .05, .5, 'highpass', 2500, 1, null, .15, .001); osc('sine', 900, t, .05, .15, .001, .1, 300); },
-    riser: t => { noise(t, 2.2, .3, 'bandpass', 200, 3, 5000, .5, 2); osc('sawtooth', note(0, 3), t, 2.2, .05, 2, .4, note(0, 5)); },
-    boom: t => { osc('sine', 70, t, 2.6, .9, .005, .4, 26); noise(t, 1.4, .5, 'lowpass', 900, .7, 60, .5, .005); },
-    shimmer: t => { [4, 6, 9, 11, 13].forEach((d, i) => osc('sine', note(d, 7), t + i * .05, 1.8, .045, .01, .8)); },
+    riser: t => { noise(t, 2.4, .32, 'bandpass', 200, 3, 6000, .5, 2.2); osc('sawtooth', note(0, 3), t, 2.4, .05, 2.2, .4, note(0, 5)); osc('sawtooth', note(4, 3), t, 2.4, .035, 2.2, .4, note(4, 5)); },
+    boom: t => { osc('sine', 70, t, 2.8, .95, .005, .4, 24); osc('triangle', 140, t, .6, .3, .002, .3, 40); noise(t, 1.6, .55, 'lowpass', 1100, .7, 50, .55, .004, 'hall', brownBuf); },
+    shimmer: t => { [4, 6, 9, 11, 13, 16].forEach((d, i) => fm(note(d, 6), 2, .8, t + i * .055, 2.2, .035, .8, .35, (i % 2 ? .5 : -.5))); },
     pop: t => osc('sine', 700, t, .09, .25, .002, .15, 180),
-    bell: t => { const f = note([0, 2, 4][Math.floor(Math.random() * 3)], 7); [1, 2.76, 5.4, 8.93].forEach((m, i) => osc('sine', f * m, t, 2.4 / (1 + i), .08 / (1 + i * 1.5), .002, .7)); },
-    glass: t => { const f = note(4, 7); [1, 2.32, 4.25].forEach((m, i) => osc('sine', f * m, t, 3 / (1 + i), .05 / (1 + i), .003, .9)); },
-    sub: t => osc('sine', 48, t, 2.2, .6, .02, .1, 36),
-    domino: (t, v = 0) => { const k = clamp(v); noise(t, .02 + k * .2, .4 + k * .3, 'bandpass', 4200 - k * 3800, 1.4, null, .15 + k * .4, .001); if (k > .25) osc('sine', 160 - k * 110, t, .2 + k * 1.2, .2 + k * .6, .003, .3, 40 - k * 10); },
-    paper: t => { for (let i = 0; i < 6; i++) noise(t + i * .03 + Math.random() * .02, .04, .12, 'highpass', 3000 + Math.random() * 3000, 1, null, .1); },
-    rise: t => { [0, 4, 7, 9, 11].forEach((d, i) => osc('sine', note(d, 5), t + i * .12, 2.2, .05, .4, .8)); },
-    slam: t => { osc('sine', 60, t, 1.2, .9, .002, .3, 30); noise(t, .5, .7, 'lowpass', 2500, .7, 200, .4, .001); },
-    flap: t => { for (let i = 0; i < 9; i++) noise(t + i * .045 + Math.random() * .02, .025, .2, 'bandpass', 2600, 2, null, .1, .001, 'room'); },
-    wave: t => noise(t, 1.8, .4, 'lowpass', 300, .7, 2200, .5, .5),
+    bell: t => { const f = note([0, 2, 4][Math.floor(R_() * 3)], 6); fm(f, 3.5, 2.2, t, 3.2, .09, .7, .3); fm(f * 2, 1.41, 1, t, 2, .03, .7, .2); },
+    glass: t => { const f = note(4, 7); [1, 2.32, 4.25].forEach((m, i) => osc('sine', f * m, t, 3 / (1 + i), .05 / (1 + i), .003, .9, null, 'hall', .3)); },
+    sub: t => osc('sine', 48, t, 2.4, .65, .02, .1, 34),
+    domino: (t, v = 0) => { const k = Math.min(1, Math.max(0, v)); noise(t, .02 + k * .2, .45 + k * .3, 'bandpass', 4200 - k * 3800, 1.4, null, .15 + k * .4, .001); osc('triangle', 900 - k * 760, t, .05 + k * .1, .08, .001, .2); if (k > .25) osc('sine', 160 - k * 110, t, .25 + k * 1.4, .25 + k * .65, .003, .35, 38 - k * 10); },
+    paper: t => { for (let i = 0; i < 7; i++) noise(t + i * .028 + R_() * .02, .045, .12, 'highpass', 2600 + R_() * 3400, 1, null, .1); },
+    rise: t => { [0, 4, 7, 9, 11, 14].forEach((d, i) => osc('sine', note(d, 5), t + i * .12, 2.4, .045, .4, .8, null, 'hall', .25, i % 2 ? .4 : -.4)); },
+    slam: t => { osc('sine', 60, t, 1.3, .95, .002, .3, 28); noise(t, .6, .75, 'lowpass', 2600, .7, 180, .45, .001); noise(t, .08, .5, 'highpass', 3000, 1, null, .2, .001); },
+    flap: t => { for (let i = 0; i < 14; i++) noise(t + i * .04 + R_() * .02, .025, .22, 'bandpass', 2200 + R_() * 900, 2.2, null, .1, .001, 'room', null, 0, (R_() - .5) * 1.4); },
+    wave: t => noise(t, 1.9, .42, 'lowpass', 280, .7, 2400, .55, .55, 'hall', brownBuf),
+    // --- new designed sounds
+    glitch: t => { for (let i = 0; i < 16; i++) { const tt = t + i * .022 + R_() * .01; osc('square', 80 + R_() * 2400, tt, .018 + R_() * .02, .07, .001, .05, null, 'room', 0, (R_() - .5) * 1.6); if (R_() < .3) noise(tt, .02, .2, 'highpass', 6000, 1, null, 0, .001); } osc('sawtooth', 55, t, .25, .25, .001, .1, 30); },
+    shatter: t => { noise(t, .35, .55, 'highpass', 2500, .7, 9000, .4, .001); for (let i = 0; i < 26; i++) fm(2200 + R_() * 5200, 1.53 + R_(), 1.5, t + R_() * .5 * (i / 26), .25 + R_() * .7, .035, .6, .25, (R_() - .5) * 1.8); osc('sine', 75, t, .8, .5, .002, .3, 35); },
+    ink: t => { noise(t, 2.2, .35, 'lowpass', 120, 2, 900, .7, 1.2, 'hall', brownBuf); osc('sine', note(0, 2), t, 2.2, .28, .9, .4, note(0, 2) * .7); fm(note(4, 5), 1.5, .6, t + .6, 2.4, .04, .9, .4); },
+    kaleido: t => { for (let i = 0; i < 10; i++) fm(note([0, 2, 4, 7, 9][i % 5], 5 + Math.floor(i / 5)), 2, 1, t + i * .07, 1.6, .04, .8, .45, Math.sin(i) * .8); noise(t, 1.2, .18, 'bandpass', 800, 4, 6000, .6, .6); },
+    zoom: t => { noise(t, 1.2, .5, 'bandpass', 180, 1.5, 7000, .4, .9); osc('sawtooth', 60, t, 1.2, .08, .9, .3, 600); osc('sine', 55, t + 1.05, 1.6, .6, .004, .3, 30); },
+    tear: t => { for (let i = 0; i < 40; i++) noise(t + i * .022 * (1 + R_() * .3), .03 + R_() * .03, .18 + R_() * .2, 'bandpass', 1500 + R_() * 3500, 1.5, null, .08, .001, 'room', null, 0, -.6 + i / 40 * 1.2); },
+    twang: t => { [0, 7].forEach((d, i) => osc('sawtooth', note(d, 3), t, 2.4, .12, .002, .4, note(d, 3) * .985, 'hall', .2)); noise(t, .06, .3, 'bandpass', 1800, 3, null, .2, .001); },
+    sortdown: t => { for (let i = 0; i < 22; i++) osc('square', 3200 * Math.pow(.86, i), t + i * .045, .04, .06, .001, .1, null, 'room', .25, (i % 2 ? .5 : -.5)); },
+    sparkle: t => { for (let i = 0; i < 12; i++) fm(note([4, 7, 9, 11, 14][i % 5], 6), 3, .5, t + R_() * .9, .5, .03, .8, .4, (R_() - .5) * 1.6); },
+    choir: t => { [0, 4, 7, 11, 14].forEach((d, i) => vowel(note(d, 3), t + i * .08, 3.2, .05)); },
+    thunder: t => { noise(t, .12, .7, 'highpass', 1200, .7, null, .3, .001); noise(t + .05, 3.2, .7, 'lowpass', 500, .8, 60, .7, .02, 'hall', brownBuf); osc('sine', 45, t + .05, 2.4, .45, .01, .4, 28); },
+    crackle: t => { for (let i = 0; i < 9; i++) noise(t + R_() * .6, .006 + R_() * .01, .3 + R_() * .3, 'highpass', 1500 + R_() * 4000, .7, null, .1, .0005, 'room', null, 0, (R_() - .5)); },
+    stamp: t => { osc('sine', 110, t, .35, .9, .001, .25, 45); noise(t, .09, .6, 'bandpass', 900, 1, null, .25, .001); noise(t + .002, .04, .4, 'highpass', 4000, 1, null, .1, .001); },
+    scratch: t => noise(t, .07 + R_() * .05, .07, 'bandpass', 3000 + R_() * 2500, 6, null, .05, .01, 'room'),
+    chirp: (t, v = 1) => { const f = 2600 + R_() * 2200, p = (R_() - .5) * 1.6; for (let i = 0; i < 2 + Math.floor(R_() * 3); i++) osc('sine', f * (1 + R_() * .2), t + i * .09, .06, .05 * v, .005, .5, f * (1.3 + R_() * .4), 'hall', .1, p); },
+    bleep: (t, v = 1) => { const f = note(Math.floor(R_() * 7), 6); osc('square', f, t, .07, .03 * v, .002, .2, null, 'room', .35, (R_() - .5) * 1.4); },
+    heart: t => { [0, .22].forEach((d, i) => osc('sine', 62, t + d, .22, i ? .45 : .7, .004, .15, 38)); },
+    tapestop: t => { osc('sawtooth', note(0, 4), t, 1.1, .1, .01, .3, 25); noise(t, 1.1, .2, 'lowpass', 3000, 1, 80, .3, .05); },
+    zap: t => { osc('sawtooth', 2400, t, .18, .12, .001, .2, 90); noise(t, .12, .3, 'highpass', 5000, 1, null, .2, .001); },
+    ding: t => { fm(note(4, 6), 3.01, 1.2, t, 1.6, .08, .5, .25); },
+    cricket: t => { const f = 4200 + R_() * 600, p = (R_() - .5) * 1.4; for (let i = 0; i < 4; i++) osc('sine', f, t + i * .032, .016, .018, .002, .25, null, 'hall', 0, p); },
+    stomp: t => { osc('sine', 52, t, .5, .8, .002, .2, 32); noise(t, .2, .3, 'lowpass', 600, 1, 90, .2, .001); },
   };
+  function vowel(f, t, dur, peak, pan = 0) {
+    if (!ac) return;
+    const o = ac.createOscillator(), o2 = ac.createOscillator(); o.type = 'sawtooth'; o2.type = 'sawtooth'; o.frequency.value = f; o2.frequency.value = f * 1.004;
+    const sum = ac.createGain(); sum.gain.value = .5; o.connect(sum); o2.connect(sum);
+    const g = ac.createGain();
+    [[700, 8, 1], [1220, 10, .55], [2600, 12, .3]].forEach(([ff, q, v]) => { const b = ac.createBiquadFilter(); b.type = 'bandpass'; b.frequency.value = ff; b.Q.value = q; const bg = ac.createGain(); bg.gain.value = v * 3; sum.connect(b); b.connect(bg); bg.connect(g); });
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(peak, t + dur * .35); g.gain.linearRampToValueAtTime(0, t + dur);
+    out(g, .9, 'hall', .1, pan); o.start(t); o2.start(t); o.stop(t + dur + .1); o2.stop(t + dur + .1);
+  }
   function hit(name, v, delay = 0) {
-    if (!ac || muted || !HITS[name]) return;
+    if (!ac || muted || !HITS[name] || ac.state !== 'running') return;
     const now = ac.currentTime; if (lastHit[name] && now - lastHit[name] < .035) return; lastHit[name] = now;
     try { HITS[name](now + .01 + delay, v); } catch (e) { }
   }
-  // Pads: a seamless additive drone per scene, a chord of just-intonation degrees.
+  // ---------- beds: per-slide soundscapes ----------
   class Bed {
-    constructor(o) { this.o = o; this.g = null; this.voices = []; this.level = 0; beds.push(this); }
-    _start() {
-      if (!ac || this.g) return; const o = this.o;
-      this.g = ac.createGain(); this.g.gain.value = 0; this.fl = ac.createBiquadFilter(); this.fl.type = 'lowpass'; this.fl.frequency.value = o.cut || 900; this.fl.Q.value = .4;
-      this.fl.connect(this.g); out(this.g, o.wet ?? .6);
+    constructor(o) { this.o = o; this.nodes = null; this.level = 0; this.params = {}; this.nextArp = 0; this.nextPulse = 0; this.step = 0; this.killT = null; }
+    _build() {
+      const o = this.o, n = { stops: [], g: ac.createGain() }; n.g.gain.value = 0;
+      n.fl = ac.createBiquadFilter(); n.fl.type = 'lowpass'; n.fl.frequency.value = o.cut || 900; n.fl.Q.value = .5; n.fl.connect(n.g); out(n.g, o.wet ?? .6, 'hall', o.delay || 0);
+      const lfo = ac.createOscillator(), lg = ac.createGain(); lfo.frequency.value = .07; lg.gain.value = (o.cut || 900) * .35; lfo.connect(lg); lg.connect(n.fl.frequency); lfo.start(); n.stops.push(lfo);
       (o.chord || [0, 4, 7]).forEach((d, i) => {
         for (const det of [-1, 1]) {
-          const os = ac.createOscillator(); os.type = o.wave || (i ? 'sine' : 'triangle'); os.frequency.value = note(d, o.oct ?? 4) * (1 + det * .0025);
+          const os = ac.createOscillator(); os.type = o.wave || (i ? 'sine' : 'triangle'); os.frequency.value = note(d, o.oct ?? 4) * (1 + det * .0028);
           const vg = ac.createGain(); vg.gain.value = (o.vol || .05) / (1 + i * .4);
-          const lfo = ac.createOscillator(), lg = ac.createGain(); lfo.frequency.value = .05 + Math.random() * .12; lg.gain.value = vg.gain.value * .6; lfo.connect(lg); lg.connect(vg.gain);
-          os.connect(vg); vg.connect(this.fl); os.start(); lfo.start(); this.voices.push(os, lfo);
+          const tr = ac.createOscillator(), tg = ac.createGain(); tr.frequency.value = .05 + Math.random() * .15; tg.gain.value = vg.gain.value * .5; tr.connect(tg); tg.connect(vg.gain);
+          os.connect(vg); vg.connect(n.fl); os.start(); tr.start(); n.stops.push(os, tr);
         }
       });
+      if (o.sub) { const s = ac.createOscillator(); s.frequency.value = note(o.chord?.[0] || 0, (o.oct ?? 4) - 2); const sg = ac.createGain(); sg.gain.value = o.sub; s.connect(sg); sg.connect(n.g); s.start(); n.stops.push(s); }
+      if (o.choir) {
+        n.choir = ac.createGain(); n.choir.gain.value = o.choir; n.choir.connect(n.g);
+        (o.chord || [0, 4, 7]).slice(0, 3).forEach(d => { const f = note(d, (o.oct ?? 4)); const os = ac.createOscillator(); os.type = 'sawtooth'; os.frequency.value = f; const vib = ac.createOscillator(), vg = ac.createGain(); vib.frequency.value = 4.6 + Math.random(); vg.gain.value = f * .006; vib.connect(vg); vg.connect(os.frequency);
+          [[700, 9, 1], [1150, 11, .5], [2500, 12, .25]].forEach(([ff, q, v]) => { const b = ac.createBiquadFilter(); b.type = 'bandpass'; b.frequency.value = ff; b.Q.value = q; const bg = ac.createGain(); bg.gain.value = v * .5; os.connect(b); b.connect(bg); bg.connect(n.choir); });
+          os.start(); vib.start(); n.stops.push(os, vib); });
+      }
+      if (o.noise) {
+        const s = ac.createBufferSource(); s.buffer = o.noise.brown ? brownBuf : noiseBuf; s.loop = true; const f = ac.createBiquadFilter(); f.type = o.noise.type || 'bandpass'; f.frequency.value = o.noise.freq || 600; f.Q.value = o.noise.q || .8;
+        const ng = ac.createGain(); ng.gain.value = o.noise.vol || .05; const wl = ac.createOscillator(), wg = ac.createGain(); wl.frequency.value = o.noise.wobble || .11; wg.gain.value = (o.noise.freq || 600) * .5; wl.connect(wg); wg.connect(f.frequency);
+        s.connect(f); f.connect(ng); ng.connect(n.g); s.start(); wl.start(); n.stops.push(s, wl); n.noiseF = f; n.noiseG = ng;
+      }
+      if (o.hum) { [60, 120, 180, 300].forEach((hz, i) => { const h = ac.createOscillator(); h.type = i ? 'sine' : 'sawtooth'; h.frequency.value = hz; const hg = ac.createGain(); hg.gain.value = o.hum / (1 + i * 1.5); h.connect(hg); hg.connect(n.g); h.start(); n.stops.push(h); }); }
+      this.nodes = n; this.nextArp = ac.currentTime + .1; this.nextPulse = ac.currentTime + .1;
     }
-    set(level, bright) { if (!ac) return; this._start(); const t = ac.currentTime; this.g.gain.cancelScheduledValues(t); this.g.gain.setTargetAtTime(level, t, .6); if (bright != null) this.fl.frequency.setTargetAtTime(bright, t, .8); }
+    set(level, bright) {
+      this.level = level; if (!ac) return;
+      if (this.killT) { clearTimeout(this.killT); this.killT = null; }
+      if (level > 0 && !this.nodes) { this._build(); beds.add(this); }
+      if (!this.nodes) return;
+      const t = ac.currentTime; this.nodes.g.gain.cancelScheduledValues(t); this.nodes.g.gain.setTargetAtTime(level, t, level > 0 ? .6 : .5);
+      if (bright != null) this.nodes.fl.frequency.setTargetAtTime(bright, t, .8);
+      if (level <= 0) this.killT = setTimeout(() => this._kill(), 4000);
+    }
+    _kill() { if (!this.nodes || this.level > 0) return; this.nodes.stops.forEach(s => { try { s.stop(); } catch (e) { } }); try { this.nodes.g.disconnect(); } catch (e) { } this.nodes = null; beds.delete(this); }
+    param(name, v) { this.params[name] = v; if (!this.nodes || !ac) return; const t = ac.currentTime;
+      if (name === 'cut') this.nodes.fl.frequency.setTargetAtTime(v, t, .3);
+      if (name === 'noise' && this.nodes.noiseG) this.nodes.noiseG.gain.setTargetAtTime(v, t, .3);
+      if (name === 'noiseFreq' && this.nodes.noiseF) this.nodes.noiseF.frequency.setTargetAtTime(v, t, .3);
+      if (name === 'choir' && this.nodes.choir) this.nodes.choir.gain.setTargetAtTime(v, t, .8); }
+    _sched(now) {
+      if (!this.nodes || this.level < .02 || muted) return;
+      const o = this.o, ahead = now + .25;
+      if (o.arp) {
+        const rate = (this.params.arpRate ?? o.arp.rate ?? 4); if (rate > 0) {
+          if (this.nextArp < now) this.nextArp = now + .02;
+          while (this.nextArp < ahead) {
+            const seq = o.arp.notes, d = seq[this.step % seq.length], f = note(d, (o.arp.oct ?? 5) + (o.arp.up && (this.step % (seq.length * 2) >= seq.length) ? 1 : 0)), v = (o.arp.vol ?? .05) * Math.min(1, this.level * 1.6) * (this.params.arpVol ?? 1), pan = Math.sin(this.step * .9) * .5;
+            const voice = o.arp.voice || 'pluck';
+            if (voice === 'pluck') pluck(f, this.nextArp, o.arp.len || .5, v, .3, o.arp.delay ?? .3, pan);
+            else if (voice === 'fm') fm(f, o.arp.ratio || 2, o.arp.index || 1, this.nextArp, o.arp.len || .8, v, .6, o.arp.delay ?? .3, pan);
+            else osc(voice, f, this.nextArp, o.arp.len || .12, v, .003, .25, null, 'room', o.arp.delay ?? .35, pan);
+            this.step++; this.nextArp += (1 / rate) * (o.arp.swing && this.step % 2 ? 1 + o.arp.swing : o.arp.swing ? 1 - o.arp.swing : 1);
+          }
+        }
+      }
+      if (o.pulse) {
+        const rate = this.params.pulseRate ?? o.pulse.rate ?? 1; if (rate > 0) {
+          if (this.nextPulse < now) this.nextPulse = now + .02;
+          while (this.nextPulse < ahead) { const v = (o.pulse.vol ?? .4) * Math.min(1, this.level * 1.5); const kind = o.pulse.kind || 'heart';
+            if (kind === 'heart') [0, .2].forEach((dd, i) => osc('sine', 62, this.nextPulse + dd, .22, v * (i ? .6 : 1), .004, .15, 38));
+            else if (kind === 'tick') noise(this.nextPulse, .02, v, 'highpass', 5000, .7, null, .05, .001, 'room');
+            else if (kind === 'kick') osc('sine', 58, this.nextPulse, .35, v, .002, .1, 32);
+            this.nextPulse += 1 / rate; }
+        }
+      }
+    }
   }
+  function tick() { if (!ac || ac.state !== 'running') return; const now = ac.currentTime; beds.forEach(b => b._sched(now)); }
+  function level() { if (!ana) return 0; const a = new Float32Array(ana.fftSize); ana.getFloatTimeDomainData(a); let s = 0; for (const x of a) s += x * x; return Math.sqrt(s / a.length); }
   return {
-    init, hit, note, Bed, get ctx() { return ac; },
+    init, hit, note, Bed, level, get ctx() { return ac; }, set onInit(f) { onInit = f; },
     get muted() { return muted; },
-    mute(m) { muted = m; if (master) master.gain.setTargetAtTime(m ? 0 : .8, ac.currentTime, .15); },
+    mute(m) { muted = m; if (master) master.gain.setTargetAtTime(m ? 0 : .85, ac.currentTime, .15); },
   };
 })();
 
@@ -544,7 +682,7 @@ function def(id, dur, sound, frag) { T[id] = { id, dur, sound, mat: shader(`unif
 def('fade', .8, null, `void main(){ float p=smoothstep(0.,1.,uP); gl_FragColor=vec4(mix(texture(tA,vUv).rgb,texture(tB,vUv).rgb,p),1.); }`);
 
 // 2 · portal — next scene opens as a growing window while the old frame zooms past
-def('portal', 1.6, 'whoosh', `
+def('portal', 1.6, 'zoom', `
 void main(){
   float p=uP, e=p<.5?4.*p*p*p:1.-pow(-2.*p+2.,3.)/2.;
   vec2 c=vUv-.5;
@@ -562,7 +700,7 @@ void main(){
   gl_FragColor=vec4(col,1.); }`);
 
 // 3 · line — collapse to a vibrating glowing string, then expand
-def('line', 2.2, 'wave', `
+def('line', 2.2, 'twang', `
 void main(){
   float p=uP; bool first=p<.5; float k=first? p*2. : (1.-p)*2.;  // 0 → 1 → 0
   float e=pow(k,2.2);
@@ -646,7 +784,7 @@ void main(){
   gl_FragColor=vec4(col,1.); }`);
 
 // 7 · daybreak — frame breaks into bokeh discs, glows, re-forms as B
-def('daybreak', 3.0, 'shimmer', `
+def('daybreak', 3.0, 'choir', `
 void main(){
   float p=uP; float k=sin(p*PI); // 0→1→0
   vec2 g=vec2(34.,20.); vec2 uv=vUv;
@@ -670,7 +808,7 @@ void main(){
   gl_FragColor=vec4(col,1.); }`);
 
 // 8 · dissolve — chunky pixels dissolve through noise
-def('dissolve', 1.4, 'paper', `
+def('dissolve', 1.4, 'sparkle', `
 void main(){
   float p=uP; float bs=mix(80.,6.,abs(p-.5)*2.);
   vec2 cell=floor(vUv*vec2(bs*uAsp,bs));
@@ -682,7 +820,7 @@ void main(){
   gl_FragColor=vec4(mix(A,B,m)+near*.08,1.); }`);
 
 // 9 · tear — vertical ripped seam, sheets peel apart with fibrous edges
-def('tear', 2.4, 'paper', `
+def('tear', 2.4, 'tear', `
 void main(){
   float p=uP; float e=p*p*(3.-2.*p);
   float seam=.5+(fbm(vec2(vUv.y*8.,3.))-.5)*.08+(vnoise(vec2(vUv.y*60.,1.))-.5)*.012;
@@ -717,7 +855,7 @@ void main(){
 
 
 // 11 · glitch — datamosh: row tearing, RGB split, block corruption, hard cut at .5
-def('glitch', 1.1, 'snap', `
+def('glitch', 1.1, 'glitch', `
 void main(){
   float p=uP; float k=1.-abs(p*2.-1.); k=pow(k,.7);
   float step_=floor(uTime*24.);
@@ -738,7 +876,7 @@ void main(){
   gl_FragColor=vec4(c,1.); }`);
 
 // 12 · shatter — the frame breaks into Voronoi glass shards that tumble away toward the camera
-def('shatter', 2.2, 'slam', `
+def('shatter', 2.2, 'shatter', `
 void main(){
   float p=uP;
   vec2 P=vUv*vec2(uAsp,1.)*5.;
@@ -766,7 +904,7 @@ void main(){
   gl_FragColor=vec4(col,1.); }`);
 
 // 13 · ink — B blooms through A like ink in water
-def('ink', 2.2, 'wave', `
+def('ink', 2.2, 'ink', `
 void main(){
   vec2 p=(vUv-.5)*vec2(uAsp,1.);
   float n=fbm(p*3.+vec2(uTime*.2,0.))*.55+fbm(p*9.-uTime*.1)*.2;
@@ -780,7 +918,7 @@ void main(){
   gl_FragColor=vec4(c,1.); }`);
 
 // 14 · kaleido — fold A into a spinning kaleidoscope, unfold as B
-def('kaleido', 2.0, 'shimmer', `
+def('kaleido', 2.0, 'kaleido', `
 void main(){
   float p=uP, k=sin(p*PI);
   vec2 c=(vUv-.5)*vec2(uAsp,1.);
@@ -795,7 +933,7 @@ void main(){
   gl_FragColor=vec4(col,1.); }`);
 
 // 15 · zoomblur — hyperspace: radial streaks out of A, into B
-def('zoomblur', 1.5, 'whoosh', `
+def('zoomblur', 1.5, 'zoom', `
 void main(){
   float p=uP, k=sin(p*PI);
   vec2 c=vUv-.5; vec3 acc=vec3(0.);
@@ -807,7 +945,7 @@ void main(){
   gl_FragColor=vec4(acc,1.); }`);
 
 // 16 · pixelsort — rows melt downward in sorted streaks, revealing B
-def('pixelsort', 1.8, 'paper', `
+def('pixelsort', 1.8, 'sortdown', `
 void main(){
   float p=uP; float col=floor(vUv.x*260.);
   float h=hash11(col*1.31);
@@ -844,7 +982,7 @@ const TRANSITIONS = T;
   SCENES.push({
     id: 'intro', title: 'Cold open', enterWith: 'fade', hud: { hidden: true },
     beats: [{ dur: 4.5, hold: 2 }, { dur: 8, hold: 4 }, { dur: 2.6, hold: 1.5 }],
-    bed: { chord: [0, 7, 12], oct: 2, cut: 380, vol: .07, level: [.35, .55, .25] },
+    bed: { chord: [0, 7, 12], oct: 2, cut: 300, vol: .055, sub: .2, noise: { brown: true, type: 'lowpass', freq: 180, vol: .3, wobble: .05 }, pulse: { kind: 'heart', rate: .8, vol: .55 }, level: [.55, .65, .35] },
     notes: [
       'Lights down. One point of light, so dense it bends the stars behind it.',
       'Then it goes. Everything that follows in this talk is what happens after that moment.',
@@ -927,6 +1065,8 @@ void main(){ vec2 p=(vUv-.5)*vec2(uAsp,1.); float r=length(p);
           s.post = { streak: .6, flare: V.portrait ? .12 : .3, bloom: .55, threshold: 1.1, exposure: 1, vignette: .55, grain: .035, ca: .0025 + (s.on(1) ? Math.exp(-b * 3) * .02 : 0), halation: .5 };
           if (s.cross(0, .3)) AU.hit('sub'); if (s.cross(1, 0)) { AU.hit('boom'); AU.hit('slam'); } if (s.cross(1, .4)) AU.hit('shimmer'); if (s.cross(1, 3.2)) AU.hit('riser'); if (s.cross(1, 6.6)) AU.hit('bell');
           if (s.cross(2, 1.2)) AU.hit('whoosh');
+          if (s.cross(1, 0)) AU.hit('shatter'); if (s.cross(1, 3.6)) AU.hit('sparkle'); if (s.cross(1, 6.2)) AU.hit('choir'); if (s.cross(2, .9)) AU.hit('glitch'); if (s.cross(0, 1.2)) AU.hit('glitch');
+          if (s.bed) { s.bed.param('pulseRate', s.on(1) ? 0 : Math.min(1.6, .75 + s.at(0) * .08)); s.bed.param('noise', s.on(1) ? .12 : .3); }
         },
         render(slot) { pass(bg, slot.hdr); if (titleReady) { R.setRenderTarget(slot.hdr); R.render(scene3, cam); } },
         draw2d(g, s) {
@@ -1037,7 +1177,7 @@ void main(){
   SCENES.push({
     id: 'forecast', title: 'The horizon is collapsing', enterWith: 'kaleido', hud: { color: '#ff9fd0' },
     beats: [{ dur: 3, hold: 4 }, { dur: 3.5, hold: 4 }, { dur: 3.5, hold: 4 }, { dur: 3, hold: 2 }],
-    bed: { chord: [0, 5, 9, 12], oct: 3, cut: 900, vol: .05, level: [.35, .45, .55, .7] },
+    bed: { chord: [0, 5, 9, 12], oct: 3, cut: 1100, vol: .04, wave: 'sawtooth', sub: .12, arp: { notes: [0, 4, 7, 11, 14, 11, 7, 4], oct: 4, rate: 6, voice: 'sawtooth', len: .1, vol: .03, delay: .45 }, pulse: { kind: 'kick', rate: 1.53, vol: .35 }, level: [.4, .5, .6, .75] },
     notes: [
       'In 2020, the forecasting community on Metaculus put the arrival of general AI about fifty years away: around 2070.',
       'By February 2026, the same community\'s median was 2033. The beacon has been sliding down the road toward us.',
@@ -1055,7 +1195,8 @@ void main(){
           u.uCamZ.value = Math.sin(s.t * .3) * .05 - Math.min(s.t * .05, 3) - rush * (Math.abs(zOf(2033)) - 4); u.uWarp.value = rush;
           s.camZ = u.uCamZ.value;
           s.post = { streak: .5, flare: .2, bloom: .55, threshold: 1.1, exposure: .9, vignette: .5, grain: .035, ca: .002 + rush * .02, halation: .4 };
-          if (s.cross(1, .1)) AU.hit('riser'); if (s.cross(1, 3.3)) AU.hit('bell'); if (s.cross(2, .5)) AU.hit('glass'); if (s.cross(2, 3.3)) AU.hit('bell'); if (s.cross(3, .1)) AU.hit('whoosh');
+          if (s.cross(1, .1)) AU.hit('riser'); if (s.cross(1, 3.3)) AU.hit('bell'); if (s.cross(2, .5)) AU.hit('glass'); if (s.cross(2, 3.3)) AU.hit('bell'); if (s.cross(3, .1)) { AU.hit('zoom'); AU.hit('riser'); } if (s.cross(1, 2.9) || s.cross(2, 3.1)) AU.hit('ding'); if (s.cross(1, .1) || s.cross(2, .6)) AU.hit('whoosh'); if (s.cross(0, .3)) AU.hit('glitch');
+          if (s.bed) s.bed.param('arpRate', s.on(3) ? 6 + s.p[3] * 18 : 6);
         },
         render(slot) { pass(mat, slot.hdr); },
         draw2d(g, s) {
@@ -1127,7 +1268,7 @@ void main(){
   SCENES.push({
     id: 'tower', title: 'The line that moved them', enterWith: 'portal', hud: { color: '#ffffff' },
     beats: [{ dur: 6, hold: 2 }, { dur: 7, hold: 2 }, { dur: 8, hold: 2 }, { dur: 5, hold: 3 }],
-    bed: { chord: [0, 4, 7, 11], oct: 3, cut: 700, vol: .05, level: [.35, .45, .6, .4] },
+    bed: { chord: [0, 4, 7, 11], oct: 3, cut: 700, vol: .04, choir: 0, noise: { type: 'bandpass', freq: 500, q: .6, vol: .14, wobble: .13 }, level: [.4, .5, .65, .45] },
     notes: [
       'This is METR\'s measurement: how long a task, measured in human time, an AI agent can finish on its own half the time. One sheet of paper here is one hour. This is the curve the forecasters were reacting to.',
       'Across METR\'s combined task suites the doubling time is about 3.6 months. Claude Mythos Preview was estimated at roughly 17 hours, with a very wide error bar (8.5 to 55 hours).',
@@ -1246,6 +1387,8 @@ void main(){
           s.post = { streak: .35, flare: .25, bloom: .5, threshold: 1.1, exposure: .82, contrast: 1.1, vignette: .45, grain: .03, ca: .0016, halation: .35 };
           if (s.cross(1, .4) || s.cross(2, .4)) AU.hit('riser'); if (s.cross(2, 5) || s.cross(3, .2)) AU.hit('boom');
           if (s.cross(0, 1.2) || s.cross(0, 3.4) || s.cross(1, 3.2)) AU.hit('pop');
+          if (s.cross(1, 3.6)) AU.hit('ding'); if (s.cross(2, 6.5)) AU.hit('choir');
+          if (s.bed) { const sp = Math.min(1, Math.abs(vel) / 900); s.bed.param('noise', .06 + sp * .35 * (1 - clamp((cam.position.y - 1200) / 2500))); s.bed.param('noiseFreq', 350 + sp * 1600); s.bed.param('choir', cam.position.y > 1200 ? .12 : 0); }
         },
         render(slot, s) {
           R.setRenderTarget(slot.aux); R.setClearColor(0, 1); R.clear(); R.render(scene3, cam);
@@ -1337,7 +1480,7 @@ void main(){
   SCENES.push({
     id: 'dominoes', title: 'Each one 1.5×', enterWith: 'shatter', hud: { color: '#9ef6ff' },
     beats: [{ dur: 2, hold: 3 }, { dur: REAL_END + 1, hold: 2 }, { dur: 2, hold: 4 }],
-    bed: { chord: [0, 3, 7, 10], oct: 2, cut: 500, vol: .06, level: [.25, .5, .35] },
+    bed: { chord: [0, 3, 7, 10], oct: 2, cut: 500, vol: .045, sub: .15, choir: 0, pulse: { kind: 'tick', rate: 2, vol: .12 }, level: [.3, .5, .4] },
     notes: [
       'A row of dominoes. Each one is exactly one and a half times the size of the one before. The first is five centimetres tall.',
       'Watch the counter. Domino 18 is about 49 metres. Domino 25 is taller than the Burj Khalifa. Domino 31, almost ten kilometres, is taller than Everest. Nothing about any single step looks dramatic.',
@@ -1417,7 +1560,7 @@ void main(){ float t=max(uT,0.); float k=1.-exp(-t*1.2);
             const hk = h(k), th = angle(k, tf);
             Q.setFromAxisAngle(Z, -th); OFF.set(-hk * .16, 0, 0).applyQuaternion(Q);
             M.compose(P.set(xs[k] + hk * .16, 0, 0).add(OFF), Q, S.set(hk * .16, hk, hk * .5)); mesh.setMatrixAt(k, M);
-            if (k > lastHit && tf >= impT[k]) { lastHit = k; if (s.on(1) && !s.on(2) && s.dir > 0) AU.hit('domino', k / (N - 1)); if (k === N - 1) { impactT = impT[k]; if (s.on(1) && !s.on(2)) { AU.hit('boom'); AU.hit('shimmer'); } } }
+            if (k > lastHit && tf >= impT[k]) { lastHit = k; if (s.on(1) && !s.on(2) && s.dir > 0) AU.hit('domino', k / (N - 1)); if (k > 18 && s.on(1) && !s.on(2) && s.dir > 0) AU.hit('stomp'); if (k === N - 1) { impactT = impT[k]; if (s.on(1) && !s.on(2)) { AU.hit('boom'); AU.hit('shimmer'); AU.hit('thunder'); AU.hit('choir', 0, .6); } } }
           }
           mesh.instanceMatrix.needsUpdate = true;
           ci = ciAt(tf); const c0 = Math.floor(ci), fr = ci - c0; hc = 1.5 ** ci;
@@ -1440,6 +1583,9 @@ void main(){ float t=max(uT,0.); float k=1.-exp(-t*1.2);
           sky.uniforms.uT.value = s.t; sky.uniforms.uP.value = ci / (N - 1);
           const flash = impactT > 0 ? Math.exp(-(tf - impactT) * 3) : 0;
           s.post = { streak: .55, bloom: .6 + flash, threshold: .9, exposure: 1.05 + flash * .8, vignette: .55, grain: .035, ca: .0015 + slow * .004 + flash * .01, contrast: 1.08, halation: .4 };
+          if (slow > .45 && (s.slowPrev || 0) <= .45 && s.on(1) && !s.on(2)) AU.hit('tapestop'); s.slowPrev = slow;
+          if (s.bed) { s.bed.param('pulseRate', s.on(1) && !s.on(2) ? 2 + ci * .25 * (1 - slow) : .5); s.bed.param('choir', s.on(2) ? .15 : 0); }
+          if (s.cross(0, .3)) AU.hit('click'); if (s.cross(2, .2)) AU.hit('rise');
           s.ci = ci; s.slow = slow; s.hue = hue(Math.round(ci));
         },
         render(slot) {
@@ -1555,7 +1701,7 @@ void main(){
   SCENES.push({
     id: 'loop', title: 'The loop', enterWith: 'slam', hud: { color: '#121110' },
     beats: [{ dur: 1.5, hold: 4 }, { dur: 1.5, hold: 6 }, { dur: 1.5, hold: 5 }],
-    bed: { chord: [0, 4, 7, 9], oct: 4, cut: 1400, vol: .035, level: [.3, .45, .6] },
+    bed: { chord: [0, 4, 7, 9], oct: 4, cut: 1400, vol: .028, arp: { notes: [0, 2, 4, 7, 9, 7, 4, 2], oct: 5, rate: 3, voice: 'pluck', len: .35, vol: .055, delay: .2 }, pulse: { kind: 'tick', rate: 3, vol: .12 }, level: [.4, .55, .7] },
     notes: [
       'Until recently, people built AI. Now AI helps build AI: it writes the code, runs the experiments, reads the results.',
       'Anthropic reported that in August 2026 Claude led about 26 percent of its measured AI research work, up from under 1 percent in February. That figure is self-reported and not yet independently verified. About 30,000 agents were running at once on its main internal platform.',
@@ -1570,7 +1716,8 @@ void main(){
           s.post = { tonemap: 0, bloom: 0, vignette: .18, grain: .045, ca: .0018 };
           s.hudColor = INK[s.beat];
           if (s.cross(1, 0) || s.cross(2, 0)) AU.hit('whoosh');
-          if (Math.floor(tt * 1.5) !== Math.floor((tt - s.dt * sp) * 1.5)) AU.hit(s.beat === 2 ? 'tick' : 'click');
+          if (s.bed) { s.bed.param('arpRate', [3, 6, 12][s.beat] * (1 + s.at(s.beat) * .02)); s.bed.param('pulseRate', [1.5, 3, 6][s.beat]); }
+          if (s.cross(1, .3)) AU.hit('stomp'); if (s.cross(1, .9)) AU.hit('ding'); if (s.cross(0, .25)) AU.hit('stomp'); if (s.cross(2, .2)) AU.hit('riser');
         },
         render(slot, s) {
           const u = mat.uniforms; u.uT.value = tt; u.uAsp.value = V.W / V.H; u.uSpeed.value = 1;
@@ -1633,7 +1780,7 @@ void main(){
   SCENES.push({
     id: 'swarm', title: 'A country of them', enterWith: 'zoomblur', hud: { color: CREAM },
     beats: [{ dur: 3, hold: 3, page: '1' }, { dur: 4, hold: 3, page: '30,000' }, { dur: 11, hold: 2, page: '10,000' }, { dur: 6, hold: 6, page: '1,000,000' }],
-    bed: { chord: [0, 4, 7, 9, 11], oct: 3, cut: 900, vol: .04, level: [.25, .45, .55, .7] },
+    bed: { chord: [0, 4, 7, 9, 11], oct: 3, cut: 900, vol: .028, choir: .1, arp: { notes: [4, 7, 9, 11, 14, 16], oct: 6, rate: 1, voice: 'fm', ratio: 3, index: .6, len: 1.2, vol: .022, delay: .5 }, level: [.3, .5, .6, .75] },
     notes: [
       'One agent. One small warm light working in the dark.',
       'In August 2026, about 30,000 AI agents were running at the same time on Anthropic\'s main internal research platform. Every one of their actions passed through an automated monitor.',
@@ -1708,6 +1855,9 @@ void main(){ float d=length(vW.xz); vec3 c=vec3(.01,.011,.016)*(.7+.3*vnoise(vW.
           ground.material.uniforms.uR.value = rad;
           s.post = { streak: .45, bloom: .75, threshold: .6, exposure: 1.1, vignette: .55, grain: .028, ca: .0015, halation: .5, lift: [.0, .006, .02] };
           if (s.cross(1, 0) || s.cross(3, 0)) AU.hit('riser'); if (s.cross(2, .1)) AU.hit('whoosh'); if (s.cross(2, 5.4)) AU.hit('bell'); if (s.cross(0, .4)) AU.hit('glass');
+          if (s.bed) { s.bed.param('arpRate', [.8, 3, 5, 10][s.beat]); s.bed.param('choir', [.06, .12, .16, .22][s.beat]); }
+          if (s.on(3) && Math.floor(s.at(3)) !== Math.floor(s.at(3) - s.dt) && s.at(3) > 1.5) AU.hit('tick');
+          if (s.cross(2, 5.6)) AU.hit('choir'); if (s.cross(1, 1)) AU.hit('sparkle');
         },
         render(slot) { R.setRenderTarget(slot.hdr); R.setClearColor(new THREE.Color(.008, .009, .016), 1); R.clear(); R.render(scene3, cam); },
         draw2d(g, s) {
@@ -1760,7 +1910,7 @@ void main(){ float d=length(vW.xz); vec3 c=vec3(.01,.011,.016)*(.7+.3*vnoise(vW.
   SCENES.push({
     id: 'gigawatts', title: 'The build-out', enterWith: 'flaps', hud: { color: '#ffd36b' },
     beats: [{ dur: 3, hold: 4 }, { dur: 4, hold: 4 }, { dur: 4, hold: 5 }],
-    bed: { chord: [0, 2, 7], oct: 2, cut: 450, vol: .06, wave: 'sawtooth', level: [.25, .4, .6] },
+    bed: { chord: [0, 2, 7], oct: 2, cut: 450, vol: .045, wave: 'sawtooth', hum: .018, sub: .12, noise: { brown: true, type: 'lowpass', freq: 250, vol: .18 }, level: [.3, .45, .65] },
     notes: [
       'Demand first. DataReportal\'s Digital 2026 report counts more than a billion people using AI tools. ChatGPT alone reported around 900 million weekly users in February 2026.',
       'Then supply. The big cloud companies plan roughly $700 billion of capital spending in 2026, most of it for AI data centres, close to double 2025. Estimates vary by source and by how you count.',
@@ -1841,10 +1991,14 @@ void main(){ float ph=fract(uT*.5+aT.y); float pulse=exp(-pow((aT.x-ph)*12.,2.))
           bMat.uniforms.uT.value = s.t; bMat.uniforms.uRise.value = s.k(1, .2, 3.6, E.lin);
           lnMat.uniforms.uT.value = s.t; lnMat.uniforms.uOn.value = s.k(2, 0, 1.5, E.lin);
           boltT -= s.dt; flash *= Math.exp(-s.dt * 9);
-          if (s.on(2) && boltT <= 0) { makeBolts(); boltT = .12 + Math.random() * .5; if (Math.random() < .5) { flash = 1; AU.hit('snap'); } }
+          if (s.on(2) && boltT <= 0) { makeBolts(); boltT = .12 + Math.random() * .5; if (Math.random() < .5) { flash = 1; AU.hit('zap'); AU.hit('thunder', 0, .15 + Math.random() * .4); } }
           bolt.material.opacity = s.on(2) ? flash : 0;
           s.post = { streak: .5, flare: .2, bloom: .75 + flash * .6, threshold: .8, exposure: 1 + flash * .5, vignette: .55, grain: .035, ca: .0015 + flash * .006, halation: .5 };
           if (s.cross(1, .3)) AU.hit('riser'); if (s.cross(1, 2.4)) AU.hit('boom'); if (s.cross(2, 0)) AU.hit('sub');
+          for (const t of [.5, .9, 1.3, 1.7, 2.1, 2.6, 3.1]) if (s.cross(1, t)) AU.hit('stomp');
+          if (s.cross(0, .4)) AU.hit('sparkle'); if (s.cross(0, .4)) AU.hit('glitch'); if (s.cross(1, 1.6)) AU.hit('ding');
+          if (s.on(2)) for (let i = 0; i < 3; i++) if (s.cross(2, 1.2 + i * .5)) AU.hit('type');
+          if (s.bed) s.bed.param('noise', s.on(2) ? .3 : .15);
         },
         render(slot) { R.setRenderTarget(slot.hdr); R.setClearColor(new THREE.Color(.004, .005, .014), 1); R.clear(); R.render(scene3, cam); },
         draw2d(g, s) {
@@ -1921,7 +2075,7 @@ void main(){ float ph=fract(uT*.5+aT.y); float pulse=exp(-pow((aT.x-ph)*12.,2.))
   SCENES.push({
     id: 'exams', title: 'The tests keep breaking', enterWith: 'dissolve', hud: { color: '#ffb36b' },
     beats: [{ dur: 4, hold: 4 }, { dur: 6, hold: 4 }, { dur: 4, hold: 4 }],
-    bed: { chord: [0, 3, 7, 10], oct: 3, cut: 700, vol: .045, level: [.3, .45, .55] },
+    bed: { chord: [0, 3, 7, 10], oct: 3, cut: 700, vol: .04, noise: { type: 'highpass', freq: 2500, vol: 0, wobble: .3 }, level: [.35, .5, .55] },
     notes: [
       'July 2025: experimental reasoning models from Google DeepMind and OpenAI each reached gold-medal level at the International Mathematical Olympiad, 35 of 42 points, writing their proofs in natural language.',
       'Humanity\'s Last Exam was built in late 2024 by thousands of experts to be the hardest closed test there is: 2,500 questions. At launch in January 2025, frontier models scored in single digits. By February 2026 the best reported score was about 48%. Leaderboards disagree on later numbers.',
@@ -1974,7 +2128,11 @@ void main(){ vec3 s=position; float life=fract(s.y+uT*(.25+s.z*.4)); float y0=uB
           embers.position.copy(page.position); embers.rotation.copy(page.rotation);
           cam.position.set(0, 0, V.portrait ? 3.6 : 2.6); cam.lookAt(0, 0, 0); cam.aspect = V.W / V.H; cam.updateProjectionMatrix();
           s.post = { bloom: .5, threshold: 1.4, exposure: .92, vignette: .55, grain: .04, ca: .0015, halation: .6, streak: .1 };
-          if (s.cross(0, 1.4)) AU.hit('slam'); if (s.cross(1, .05) || s.cross(2, .05)) AU.hit('wave');
+          if (s.cross(0, 1.4)) { AU.hit('stamp'); AU.hit('ding', 0, .15); } if (s.cross(1, .05) || s.cross(2, .05)) { AU.hit('whoosh'); AU.hit('ink'); }
+          if (s.at(0) < 1.4 && !s.on(1) && Math.random() < s.dt * 9) AU.hit('scratch');
+          const burning = u.uBurn.value > .01 && u.uBurn.value < .99; if (burning && Math.random() < s.dt * 14) AU.hit('crackle');
+          if (s.bed) s.bed.param('noise', burning ? .14 : 0);
+          if (s.cross(1, 5.4)) AU.hit('ding'); if (s.cross(2, 1.8)) AU.hit('choir');
         },
         render(slot) { pass(bg, slot.hdr); R.setRenderTarget(slot.hdr); R.render(scene3, cam); },
         draw2d(g, s) {
@@ -2026,7 +2184,7 @@ void main(){ vec3 s=position; float life=fract(s.y+uT*(.25+s.z*.4)); float y0=uB
   SCENES.push({
     id: 'calendar', title: 'The compressed century', enterWith: 'tear', hud: { color: '#2b2620' },
     beats: [{ dur: 6, hold: 2 }, { dur: 7, hold: 2 }, { dur: 8, hold: 4 }],
-    bed: { chord: [0, 4, 7], oct: 4, cut: 1800, vol: .03, level: [.3, .4, .55] },
+    bed: { chord: [0, 4, 7], oct: 4, cut: 1800, vol: .025, pulse: { kind: 'tick', rate: 2, vol: .22 }, arp: { notes: [0, 4, 7, 4], oct: 6, rate: 1, voice: 'fm', ratio: 3.5, index: 1.5, len: 1, vol: .02 }, level: [.4, .5, .65] },
     notes: [
       'This is one year of scientific progress at today\'s pace. Each red square is a day of work by every researcher on Earth.',
       'Now run research ten times faster. Every calendar year, a decade of progress prints.',
@@ -2038,7 +2196,9 @@ void main(){ vec3 s=position; float life=fract(s.y+uT*(.25+s.z*.4)); float y0=uB
         update(s) {
           s.post = { tonemap: 0, bloom: 0, vignette: .25, grain: .04, ca: .0008 };
           const Y = s.on(2) ? lerp(10, 100, E.io2(s.p[2])) : s.on(1) ? lerp(1, 10, E.io2(s.p[1])) : s.p[0];
-          s.Y = Y; const tick = Math.floor(Y * (s.on(1) ? 12 : 60)); if (tick !== lastDay) { lastDay = tick; AU.hit(s.on(2) ? 'click' : 'tick'); }
+          s.Y = Y; const tick = Math.floor(Y * (s.on(1) ? 12 : 60)); if (tick !== lastDay) { lastDay = tick; }
+          if (s.bed) s.bed.param('pulseRate', s.on(2) ? 22 : s.on(1) ? 9 : 2.5);
+          const yrDone = Math.floor(Y); if (yrDone !== (s.yPrev ?? yrDone)) { if (yrDone <= 10) AU.hit('ding'); else if (yrDone % 10 === 0) AU.hit('bell'); } s.yPrev = yrDone;
           if (s.cross(1, 0) || s.cross(2, 0)) AU.hit('paper'); if (s.cross(2, 7.6)) AU.hit('bell');
         },
         render(slot) { paper.uniforms.uAsp.value = V.W / V.H; pass(paper, slot.hdr); },
@@ -2146,7 +2306,7 @@ void main(){ vec3 base=texture(tSrc,vUv).rgb; if(uAmt<=0.){ gl_FragColor=vec4(ba
   SCENES.push({
     id: 'lamp', title: 'How far you can see', enterWith: 'line', hud: { color: '#ffffff' },
     beats: [{ dur: 3.5, hold: 3, page: '1' }, { dur: 3, hold: 3, page: '2' }, { dur: 6, hold: 3, page: '8,000,000,000' }, { dur: 7, hold: 5, page: '☀' }],
-    bed: { chord: [0, 7, 11, 14], oct: 3, cut: 600, vol: .045, level: [.25, .3, .45, .8] },
+    bed: { chord: [0, 7, 11, 14], oct: 3, cut: 600, vol: .038, choir: 0, noise: { type: 'bandpass', freq: 900, q: .5, vol: .035 }, level: [.35, .4, .5, .85] },
     notes: [
       'Forget test scores for a second. Think of intelligence as how far you can see. One person, with one lantern, in a dark field.',
       'Einstein carried a brighter lantern. He could see further than almost anyone. It was still night.',
@@ -2170,7 +2330,9 @@ void main(){ vec3 base=texture(tSrc,vUv).rgb; if(uAmt<=0.){ gl_FragColor=vec4(ba
           m.uIA.value = E.out2(clamp(s.at(0) / 1.6)) * 1.6; m.uIB.value = s.k(1, .3, 1.8) * 5.5; m.uField.value = s.k(2, 0, 3.2); m.uDawn.value = s.k(3, .8, 6.5, E.io2);
           m.uPix.value = 2 * Math.tan(cam.fov * Math.PI / 360) / (V.H * 1.4);
           s.post = { streak: .5 * (1 - m.uDawn.value) ** 3, flare: .3 * (1 - m.uDawn.value) ** 3, bloom: lerp(.6, .3, m.uDawn.value), threshold: 1.1, exposure: lerp(1.15, .62, m.uDawn.value), vignette: lerp(.6, .35, m.uDawn.value), grain: .03, ca: .0015, halation: .6 };
-          if (s.cross(0, .2)) AU.hit('glass'); if (s.cross(1, .3)) AU.hit('shimmer'); if (s.cross(2, .2)) AU.hit('rise'); if (s.cross(3, .8)) { AU.hit('sub'); AU.hit('bell', 0, .4); } if (s.cross(3, 3)) AU.hit('shimmer');
+          if (s.cross(0, .2)) AU.hit('glass'); if (s.cross(1, .3)) AU.hit('shimmer'); if (s.cross(2, .2)) AU.hit('rise'); if (s.cross(3, .8)) { AU.hit('sub'); AU.hit('bell', 0, .4); } if (s.cross(3, 3)) AU.hit('shimmer'); if (s.cross(3, 1.2)) AU.hit('choir'); if (s.cross(3, 3.2)) AU.hit('rise');
+          if (!s.on(3) && Math.random() < s.dt * 2.2) AU.hit('cricket');
+          if (s.bed) { s.bed.param('choir', s.on(3) ? .22 * m.uDawn.value : 0); s.bed.param('cut', 600 + m.uDawn.value * 2200); }
         },
         render(slot, s) {
           const dawn = mat.uniforms.uDawn.value;
@@ -2212,7 +2374,7 @@ void main(){ vec3 base=texture(tSrc,vUv).rgb; if(uAmt<=0.){ gl_FragColor=vec4(ba
   SCENES.push({
     id: 'selectall', title: 'Select all', enterWith: 'pixelsort', hud: { color: '#ff5a4a' },
     beats: [{ dur: 3, hold: 2 }, { dur: 3, hold: 4 }, { dur: 4, hold: 3 }, { dur: 4, hold: 6 }],
-    bed: { chord: [0, 1, 7], oct: 2, cut: 400, vol: .06, wave: 'sawtooth', level: [.2, .3, .45, .35] },
+    bed: { chord: [0, 1, 7], oct: 2, cut: 400, vol: .045, wave: 'sawtooth', sub: .1, pulse: { kind: 'kick', rate: 1, vol: .3 }, level: [.25, .35, .5, .4] },
     notes: [
       'Control-A. Select everything: the research, the code, the experiments, the decisions.',
       'Anthropic says that in August its automated monitor reviewed more than a billion agent actions and blocked about one in 47,000 before they ran. Small rates times enormous volumes.',
@@ -2226,6 +2388,9 @@ void main(){ vec3 base=texture(tSrc,vUv).rgb; if(uAmt<=0.){ gl_FragColor=vec4(ba
           s.post = { bloom: .6, threshold: .5, vignette: .5, grain: .04, ca: .002, exposure: 1.1 };
           if (s.cross(0, .5)) AU.hit('click'); if (s.cross(0, .8)) AU.hit('click'); if (s.cross(0, 1.2)) AU.hit('select'); if (s.cross(0, 1.4)) AU.hit('riser');
           if (s.cross(2, .3)) AU.hit('sub'); if (s.cross(3, .2)) AU.hit('boom');
+          if (s.on(1) && Math.random() < s.dt * .8) AU.hit('glitch'); if (s.on(1) && Math.random() < s.dt * 1.2) AU.hit('zap');
+          for (let i = 0; i < 4; i++) if (s.cross(3, .2 + i * .35)) AU.hit('glitch');
+          if (s.bed) s.bed.param('pulseRate', [1, 1.4, 2, 2.6][s.beat]);
         },
         render(slot, s) { bg.uniforms.uT.value = s.t; bg.uniforms.uAsp.value = V.W / V.H; bg.uniforms.uRed.value = s.k(0, 1.2, 3) * (s.on(3) ? 1.4 : 1); pass(bg, slot.hdr); },
         draw2d(g, s) {
@@ -2315,7 +2480,7 @@ void main(){ vec2 p=(vUv-.5)*vec2(uAsp,1.);
   SCENES.push({
     id: 'futures', title: 'Two futures', enterWith: 'ink', hud: { color: '#ffffff' },
     beats: [{ dur: 2.5, hold: 6 }, { dur: 2.5, hold: 6 }],
-    bed: { chord: [0, 4, 7, 11], oct: 4, cut: 1200, vol: .04, level: [.4, .5] },
+    bed: { chord: [0, 4, 7, 11], oct: 4, cut: 1200, vol: .032, noise: { type: 'bandpass', freq: 700, vol: .05 }, level: [.45, .55] },
     notes: [
       'Same technology, two futures. Move the pointer across the screen. On one side, the world is handed over: capable, efficient, and no longer ours to steer. On the other, the same intelligence makes a world that is better for people: disease falls, poverty ends, and power stays spread out.',
       'Which side we land on is not decided by physics. It is decided by people, by the choices labs, governments and the rest of us make in the next few years.',
@@ -2327,6 +2492,9 @@ void main(){ vec2 p=(vUv-.5)*vec2(uAsp,1.);
           if (s.mouse.px !== lastPx) { lastPx = s.mouse.px; lastMove = s.t; }
           const target = s.t - lastMove < 3 && lastPx != null ? clamp(lastPx / V.W, .05, .95) : .5 + .3 * Math.sin(s.t * .35);
           split += (target - split) * (1 - Math.exp(-s.dt * 4));
+          if (Math.random() < s.dt * 5) { if (Math.random() < split) AU.hit('bleep', 1.2); else AU.hit('chirp', 1.3); }
+          if (s.bed) s.bed.param('noise', .02 + (1 - split) * .09);
+          if (s.cross(0, .3)) AU.hit('kaleido'); if (s.cross(1, .4)) AU.hit('choir');
           s.split = split; s.post = { bloom: .45, threshold: 1.2, vignette: .45, grain: .03, ca: .0015, exposure: .85, contrast: 1.08 };
         },
         render(slot, s) { mat.uniforms.uT.value = s.t; mat.uniforms.uAsp.value = V.W / V.H; mat.uniforms.uSplit.value = s.split; pass(mat, slot.hdr); },
@@ -2353,14 +2521,14 @@ void main(){ vec2 p=(vUv-.5)*vec2(uAsp,1.);
   SCENES.push({
     id: 'questions', title: 'Questions', enterWith: 'daybreak', hud: { color: '#ffffff', alpha: .6 },
     beats: [{ dur: 5, hold: 8 }, { dur: 2, hold: 20 }],
-    bed: { chord: [0, 4, 7, 14], oct: 3, cut: 1000, vol: .05, level: [.6, .4] },
+    bed: { chord: [0, 4, 7, 14], oct: 3, cut: 1000, vol: .04, choir: .15, level: [.6, .45] },
     notes: [
       'If it goes well, the most precious thing it gives us back is time. So: what will you do with it?',
       'Sources: Metaculus community forecasts and AI Impacts expert surveys; DataReportal Digital 2026; hyperscaler 2026 capex guidance and BloombergNEF; IMO 2025 gold-level results; Humanity\'s Last Exam leaderboards; METR time-horizon research (2025–2026); Anthropic, September 2026 report on AI-led R&D; OpenAI, September 2026 Navier–Stokes announcement (under review); Alpöge and Claude, Lean proof of the Riemann hypothesis (Nov 2026); Dario Amodei, “Machines of Loving Grace” (2024); I. J. Good (1965).',
     ],
     create() {
       return {
-        update(s) { s.post = { bloom: .6, threshold: .6, vignette: .5, grain: .03, ca: .001 }; if (s.cross(0, 1.2)) AU.hit('glass'); if (s.cross(0, 3)) AU.hit('rise'); },
+        update(s) { s.post = { bloom: .6, threshold: .6, vignette: .5, grain: .03, ca: .001 }; if (s.cross(0, 1.2)) AU.hit('glass'); if (s.cross(0, 3)) AU.hit('rise'); if (s.cross(0, 1.6)) AU.hit('choir'); if (s.cross(1, .3)) AU.hit('bell'); for (let i = 0; i < 7; i++) if (s.cross(1, .2 + i * .15)) AU.hit('type'); },
         render(slot, s) { mat.uniforms.uT.value = s.t; mat.uniforms.uAsp.value = V.W / V.H; mat.uniforms.uRise.value = s.k(0, 0, 5, E.io2); pass(mat, slot.hdr); },
         draw2d(g, s) {
           const W = V.W, H = V.H, k = Math.min(W / 1920, H / 1080) * (V.portrait ? 1.6 : 1);
@@ -2430,7 +2598,8 @@ const scenes = SCENES.map((def, idx) => {
     on(i) { return this.beat >= i; },
   };
   const hooks = def.create(ctxObj, s) || {};
-  return { def, s, hooks, bed: def.bed ? new AU.Bed(def.bed) : null, thumb: null };
+  const bed = def.bed ? new AU.Bed(def.bed) : null; s.bed = bed;
+  return { def, s, hooks, bed, thumb: null };
 });
 
 let cur = 0, tr = null, black = false, auto = false, tNow = 0;
@@ -2489,6 +2658,7 @@ function enterScene(i, atEnd, dir) {
   sc.hooks.enter && sc.hooks.enter(s, atEnd);
   if (sc.bed) sc.bed.set(sc.def.bed.level?.[s.beat] ?? .5, sc.def.bed.cut);
 }
+AU.onInit = () => { const sc = scenes[cur]; if (sc && sc.bed) sc.bed.set(sc.def.bed.level?.[sc.s.beat] ?? .5); };
 function exitScene(i) { const sc = scenes[i]; sc.hooks.exit && sc.hooks.exit(sc.s); if (sc.bed) sc.bed.set(0); }
 function goScene(i, dir) {
   if (i < 0 || i >= scenes.length || tr) return;
@@ -2592,6 +2762,7 @@ addEventListener('keydown', e => {
 });
 let idleT = 0; const wake = () => { document.body.classList.remove('idle'); idleT = 0; };
 let sx0 = null, sy0 = 0, swiped = false;
+addEventListener('touchend', () => AU.init(), { passive: true });
 canvas2.addEventListener('pointerdown', e => { AU.init(); sx0 = e.clientX; sy0 = e.clientY; swiped = false; mouse.down = true; });
 addEventListener('pointerup', e => {
   mouse.down = false;
@@ -2667,7 +2838,7 @@ async function boot() {
   cur = 0; jump(0); routeHash();
   $('load').classList.add('gone'); setTimeout(() => $('load').remove(), 700);
   last = performance.now(); requestAnimationFrame(frame);
-  window.__deck = { next, back, jump, scenes, get cur() { return cur; }, get tr() { return tr; } };
+  window.__deck = { AU, next, back, jump, scenes, get cur() { return cur; }, get tr() { return tr; } };
 }
 boot();
 

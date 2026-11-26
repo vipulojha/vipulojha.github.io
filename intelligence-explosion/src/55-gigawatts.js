@@ -19,7 +19,7 @@ import { SCENES, THREE, R, clamp, lerp, E, rig, prng, shader, V, text, AU } from
   SCENES.push({
     id: 'gigawatts', title: 'The build-out', enterWith: 'flaps', hud: { color: '#ffd36b' },
     beats: [{ dur: 3, hold: 4 }, { dur: 4, hold: 4 }, { dur: 4, hold: 5 }],
-    bed: { chord: [0, 2, 7], oct: 2, cut: 450, vol: .06, wave: 'sawtooth', level: [.25, .4, .6] },
+    bed: { chord: [0, 2, 7], oct: 2, cut: 450, vol: .045, wave: 'sawtooth', hum: .018, sub: .12, noise: { brown: true, type: 'lowpass', freq: 250, vol: .18 }, level: [.3, .45, .65] },
     notes: [
       'Demand first. DataReportal\'s Digital 2026 report counts more than a billion people using AI tools. ChatGPT alone reported around 900 million weekly users in February 2026.',
       'Then supply. The big cloud companies plan roughly $700 billion of capital spending in 2026, most of it for AI data centres, close to double 2025. Estimates vary by source and by how you count.',
@@ -100,10 +100,14 @@ void main(){ float ph=fract(uT*.5+aT.y); float pulse=exp(-pow((aT.x-ph)*12.,2.))
           bMat.uniforms.uT.value = s.t; bMat.uniforms.uRise.value = s.k(1, .2, 3.6, E.lin);
           lnMat.uniforms.uT.value = s.t; lnMat.uniforms.uOn.value = s.k(2, 0, 1.5, E.lin);
           boltT -= s.dt; flash *= Math.exp(-s.dt * 9);
-          if (s.on(2) && boltT <= 0) { makeBolts(); boltT = .12 + Math.random() * .5; if (Math.random() < .5) { flash = 1; AU.hit('snap'); } }
+          if (s.on(2) && boltT <= 0) { makeBolts(); boltT = .12 + Math.random() * .5; if (Math.random() < .5) { flash = 1; AU.hit('zap'); AU.hit('thunder', 0, .15 + Math.random() * .4); } }
           bolt.material.opacity = s.on(2) ? flash : 0;
           s.post = { streak: .5, flare: .2, bloom: .75 + flash * .6, threshold: .8, exposure: 1 + flash * .5, vignette: .55, grain: .035, ca: .0015 + flash * .006, halation: .5 };
           if (s.cross(1, .3)) AU.hit('riser'); if (s.cross(1, 2.4)) AU.hit('boom'); if (s.cross(2, 0)) AU.hit('sub');
+          for (const t of [.5, .9, 1.3, 1.7, 2.1, 2.6, 3.1]) if (s.cross(1, t)) AU.hit('stomp');
+          if (s.cross(0, .4)) AU.hit('sparkle'); if (s.cross(0, .4)) AU.hit('glitch'); if (s.cross(1, 1.6)) AU.hit('ding');
+          if (s.on(2)) for (let i = 0; i < 3; i++) if (s.cross(2, 1.2 + i * .5)) AU.hit('type');
+          if (s.bed) s.bed.param('noise', s.on(2) ? .3 : .15);
         },
         render(slot) { R.setRenderTarget(slot.hdr); R.setClearColor(new THREE.Color(.004, .005, .014), 1); R.clear(); R.render(scene3, cam); },
         draw2d(g, s) {

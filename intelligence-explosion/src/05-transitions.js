@@ -12,7 +12,7 @@ function def(id, dur, sound, frag) { T[id] = { id, dur, sound, mat: shader(`unif
 def('fade', .8, null, `void main(){ float p=smoothstep(0.,1.,uP); gl_FragColor=vec4(mix(texture(tA,vUv).rgb,texture(tB,vUv).rgb,p),1.); }`);
 
 // 2 · portal — next scene opens as a growing window while the old frame zooms past
-def('portal', 1.6, 'whoosh', `
+def('portal', 1.6, 'zoom', `
 void main(){
   float p=uP, e=p<.5?4.*p*p*p:1.-pow(-2.*p+2.,3.)/2.;
   vec2 c=vUv-.5;
@@ -30,7 +30,7 @@ void main(){
   gl_FragColor=vec4(col,1.); }`);
 
 // 3 · line — collapse to a vibrating glowing string, then expand
-def('line', 2.2, 'wave', `
+def('line', 2.2, 'twang', `
 void main(){
   float p=uP; bool first=p<.5; float k=first? p*2. : (1.-p)*2.;  // 0 → 1 → 0
   float e=pow(k,2.2);
@@ -114,7 +114,7 @@ void main(){
   gl_FragColor=vec4(col,1.); }`);
 
 // 7 · daybreak — frame breaks into bokeh discs, glows, re-forms as B
-def('daybreak', 3.0, 'shimmer', `
+def('daybreak', 3.0, 'choir', `
 void main(){
   float p=uP; float k=sin(p*PI); // 0→1→0
   vec2 g=vec2(34.,20.); vec2 uv=vUv;
@@ -138,7 +138,7 @@ void main(){
   gl_FragColor=vec4(col,1.); }`);
 
 // 8 · dissolve — chunky pixels dissolve through noise
-def('dissolve', 1.4, 'paper', `
+def('dissolve', 1.4, 'sparkle', `
 void main(){
   float p=uP; float bs=mix(80.,6.,abs(p-.5)*2.);
   vec2 cell=floor(vUv*vec2(bs*uAsp,bs));
@@ -150,7 +150,7 @@ void main(){
   gl_FragColor=vec4(mix(A,B,m)+near*.08,1.); }`);
 
 // 9 · tear — vertical ripped seam, sheets peel apart with fibrous edges
-def('tear', 2.4, 'paper', `
+def('tear', 2.4, 'tear', `
 void main(){
   float p=uP; float e=p*p*(3.-2.*p);
   float seam=.5+(fbm(vec2(vUv.y*8.,3.))-.5)*.08+(vnoise(vec2(vUv.y*60.,1.))-.5)*.012;
@@ -185,7 +185,7 @@ void main(){
 
 
 // 11 · glitch — datamosh: row tearing, RGB split, block corruption, hard cut at .5
-def('glitch', 1.1, 'snap', `
+def('glitch', 1.1, 'glitch', `
 void main(){
   float p=uP; float k=1.-abs(p*2.-1.); k=pow(k,.7);
   float step_=floor(uTime*24.);
@@ -206,7 +206,7 @@ void main(){
   gl_FragColor=vec4(c,1.); }`);
 
 // 12 · shatter — the frame breaks into Voronoi glass shards that tumble away toward the camera
-def('shatter', 2.2, 'slam', `
+def('shatter', 2.2, 'shatter', `
 void main(){
   float p=uP;
   vec2 P=vUv*vec2(uAsp,1.)*5.;
@@ -234,7 +234,7 @@ void main(){
   gl_FragColor=vec4(col,1.); }`);
 
 // 13 · ink — B blooms through A like ink in water
-def('ink', 2.2, 'wave', `
+def('ink', 2.2, 'ink', `
 void main(){
   vec2 p=(vUv-.5)*vec2(uAsp,1.);
   float n=fbm(p*3.+vec2(uTime*.2,0.))*.55+fbm(p*9.-uTime*.1)*.2;
@@ -248,7 +248,7 @@ void main(){
   gl_FragColor=vec4(c,1.); }`);
 
 // 14 · kaleido — fold A into a spinning kaleidoscope, unfold as B
-def('kaleido', 2.0, 'shimmer', `
+def('kaleido', 2.0, 'kaleido', `
 void main(){
   float p=uP, k=sin(p*PI);
   vec2 c=(vUv-.5)*vec2(uAsp,1.);
@@ -263,7 +263,7 @@ void main(){
   gl_FragColor=vec4(col,1.); }`);
 
 // 15 · zoomblur — hyperspace: radial streaks out of A, into B
-def('zoomblur', 1.5, 'whoosh', `
+def('zoomblur', 1.5, 'zoom', `
 void main(){
   float p=uP, k=sin(p*PI);
   vec2 c=vUv-.5; vec3 acc=vec3(0.);
@@ -275,7 +275,7 @@ void main(){
   gl_FragColor=vec4(acc,1.); }`);
 
 // 16 · pixelsort — rows melt downward in sorted streaks, revealing B
-def('pixelsort', 1.8, 'paper', `
+def('pixelsort', 1.8, 'sortdown', `
 void main(){
   float p=uP; float col=floor(vUv.x*260.);
   float h=hash11(col*1.31);

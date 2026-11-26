@@ -62,7 +62,7 @@ void main(){ vec3 base=texture(tSrc,vUv).rgb; if(uAmt<=0.){ gl_FragColor=vec4(ba
   SCENES.push({
     id: 'lamp', title: 'How far you can see', enterWith: 'line', hud: { color: '#ffffff' },
     beats: [{ dur: 3.5, hold: 3, page: '1' }, { dur: 3, hold: 3, page: '2' }, { dur: 6, hold: 3, page: '8,000,000,000' }, { dur: 7, hold: 5, page: '☀' }],
-    bed: { chord: [0, 7, 11, 14], oct: 3, cut: 600, vol: .045, level: [.25, .3, .45, .8] },
+    bed: { chord: [0, 7, 11, 14], oct: 3, cut: 600, vol: .038, choir: 0, noise: { type: 'bandpass', freq: 900, q: .5, vol: .035 }, level: [.35, .4, .5, .85] },
     notes: [
       'Forget test scores for a second. Think of intelligence as how far you can see. One person, with one lantern, in a dark field.',
       'Einstein carried a brighter lantern. He could see further than almost anyone. It was still night.',
@@ -86,7 +86,9 @@ void main(){ vec3 base=texture(tSrc,vUv).rgb; if(uAmt<=0.){ gl_FragColor=vec4(ba
           m.uIA.value = E.out2(clamp(s.at(0) / 1.6)) * 1.6; m.uIB.value = s.k(1, .3, 1.8) * 5.5; m.uField.value = s.k(2, 0, 3.2); m.uDawn.value = s.k(3, .8, 6.5, E.io2);
           m.uPix.value = 2 * Math.tan(cam.fov * Math.PI / 360) / (V.H * 1.4);
           s.post = { streak: .5 * (1 - m.uDawn.value) ** 3, flare: .3 * (1 - m.uDawn.value) ** 3, bloom: lerp(.6, .3, m.uDawn.value), threshold: 1.1, exposure: lerp(1.15, .62, m.uDawn.value), vignette: lerp(.6, .35, m.uDawn.value), grain: .03, ca: .0015, halation: .6 };
-          if (s.cross(0, .2)) AU.hit('glass'); if (s.cross(1, .3)) AU.hit('shimmer'); if (s.cross(2, .2)) AU.hit('rise'); if (s.cross(3, .8)) { AU.hit('sub'); AU.hit('bell', 0, .4); } if (s.cross(3, 3)) AU.hit('shimmer');
+          if (s.cross(0, .2)) AU.hit('glass'); if (s.cross(1, .3)) AU.hit('shimmer'); if (s.cross(2, .2)) AU.hit('rise'); if (s.cross(3, .8)) { AU.hit('sub'); AU.hit('bell', 0, .4); } if (s.cross(3, 3)) AU.hit('shimmer'); if (s.cross(3, 1.2)) AU.hit('choir'); if (s.cross(3, 3.2)) AU.hit('rise');
+          if (!s.on(3) && Math.random() < s.dt * 2.2) AU.hit('cricket');
+          if (s.bed) { s.bed.param('choir', s.on(3) ? .22 * m.uDawn.value : 0); s.bed.param('cut', 600 + m.uDawn.value * 2200); }
         },
         render(slot, s) {
           const dawn = mat.uniforms.uDawn.value;

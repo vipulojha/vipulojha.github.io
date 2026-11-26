@@ -36,7 +36,7 @@ import { SCENES, THREE, R, clamp, lerp, E, rig, prng, shader, V, text, AU } from
   SCENES.push({
     id: 'swarm', title: 'A country of them', enterWith: 'zoomblur', hud: { color: CREAM },
     beats: [{ dur: 3, hold: 3, page: '1' }, { dur: 4, hold: 3, page: '30,000' }, { dur: 11, hold: 2, page: '10,000' }, { dur: 6, hold: 6, page: '1,000,000' }],
-    bed: { chord: [0, 4, 7, 9, 11], oct: 3, cut: 900, vol: .04, level: [.25, .45, .55, .7] },
+    bed: { chord: [0, 4, 7, 9, 11], oct: 3, cut: 900, vol: .028, choir: .1, arp: { notes: [4, 7, 9, 11, 14, 16], oct: 6, rate: 1, voice: 'fm', ratio: 3, index: .6, len: 1.2, vol: .022, delay: .5 }, level: [.3, .5, .6, .75] },
     notes: [
       'One agent. One small warm light working in the dark.',
       'In August 2026, about 30,000 AI agents were running at the same time on Anthropic\'s main internal research platform. Every one of their actions passed through an automated monitor.',
@@ -111,6 +111,9 @@ void main(){ float d=length(vW.xz); vec3 c=vec3(.01,.011,.016)*(.7+.3*vnoise(vW.
           ground.material.uniforms.uR.value = rad;
           s.post = { streak: .45, bloom: .75, threshold: .6, exposure: 1.1, vignette: .55, grain: .028, ca: .0015, halation: .5, lift: [.0, .006, .02] };
           if (s.cross(1, 0) || s.cross(3, 0)) AU.hit('riser'); if (s.cross(2, .1)) AU.hit('whoosh'); if (s.cross(2, 5.4)) AU.hit('bell'); if (s.cross(0, .4)) AU.hit('glass');
+          if (s.bed) { s.bed.param('arpRate', [.8, 3, 5, 10][s.beat]); s.bed.param('choir', [.06, .12, .16, .22][s.beat]); }
+          if (s.on(3) && Math.floor(s.at(3)) !== Math.floor(s.at(3) - s.dt) && s.at(3) > 1.5) AU.hit('tick');
+          if (s.cross(2, 5.6)) AU.hit('choir'); if (s.cross(1, 1)) AU.hit('sparkle');
         },
         render(slot) { R.setRenderTarget(slot.hdr); R.setClearColor(new THREE.Color(.008, .009, .016), 1); R.clear(); R.render(scene3, cam); },
         draw2d(g, s) {

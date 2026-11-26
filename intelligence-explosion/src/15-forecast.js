@@ -75,7 +75,7 @@ void main(){
   SCENES.push({
     id: 'forecast', title: 'The horizon is collapsing', enterWith: 'kaleido', hud: { color: '#ff9fd0' },
     beats: [{ dur: 3, hold: 4 }, { dur: 3.5, hold: 4 }, { dur: 3.5, hold: 4 }, { dur: 3, hold: 2 }],
-    bed: { chord: [0, 5, 9, 12], oct: 3, cut: 900, vol: .05, level: [.35, .45, .55, .7] },
+    bed: { chord: [0, 5, 9, 12], oct: 3, cut: 1100, vol: .04, wave: 'sawtooth', sub: .12, arp: { notes: [0, 4, 7, 11, 14, 11, 7, 4], oct: 4, rate: 6, voice: 'sawtooth', len: .1, vol: .03, delay: .45 }, pulse: { kind: 'kick', rate: 1.53, vol: .35 }, level: [.4, .5, .6, .75] },
     notes: [
       'In 2020, the forecasting community on Metaculus put the arrival of general AI about fifty years away: around 2070.',
       'By February 2026, the same community\'s median was 2033. The beacon has been sliding down the road toward us.',
@@ -93,7 +93,8 @@ void main(){
           u.uCamZ.value = Math.sin(s.t * .3) * .05 - Math.min(s.t * .05, 3) - rush * (Math.abs(zOf(2033)) - 4); u.uWarp.value = rush;
           s.camZ = u.uCamZ.value;
           s.post = { streak: .5, flare: .2, bloom: .55, threshold: 1.1, exposure: .9, vignette: .5, grain: .035, ca: .002 + rush * .02, halation: .4 };
-          if (s.cross(1, .1)) AU.hit('riser'); if (s.cross(1, 3.3)) AU.hit('bell'); if (s.cross(2, .5)) AU.hit('glass'); if (s.cross(2, 3.3)) AU.hit('bell'); if (s.cross(3, .1)) AU.hit('whoosh');
+          if (s.cross(1, .1)) AU.hit('riser'); if (s.cross(1, 3.3)) AU.hit('bell'); if (s.cross(2, .5)) AU.hit('glass'); if (s.cross(2, 3.3)) AU.hit('bell'); if (s.cross(3, .1)) { AU.hit('zoom'); AU.hit('riser'); } if (s.cross(1, 2.9) || s.cross(2, 3.1)) AU.hit('ding'); if (s.cross(1, .1) || s.cross(2, .6)) AU.hit('whoosh'); if (s.cross(0, .3)) AU.hit('glitch');
+          if (s.bed) s.bed.param('arpRate', s.on(3) ? 6 + s.p[3] * 18 : 6);
         },
         render(slot) { pass(mat, slot.hdr); },
         draw2d(g, s) {

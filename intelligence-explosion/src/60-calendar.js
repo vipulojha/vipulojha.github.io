@@ -35,7 +35,7 @@ import { SCENES, THREE, clamp, lerp, E, shader, pass, V, text, AU } from './00-c
   SCENES.push({
     id: 'calendar', title: 'The compressed century', enterWith: 'tear', hud: { color: '#2b2620' },
     beats: [{ dur: 6, hold: 2 }, { dur: 7, hold: 2 }, { dur: 8, hold: 4 }],
-    bed: { chord: [0, 4, 7], oct: 4, cut: 1800, vol: .03, level: [.3, .4, .55] },
+    bed: { chord: [0, 4, 7], oct: 4, cut: 1800, vol: .025, pulse: { kind: 'tick', rate: 2, vol: .22 }, arp: { notes: [0, 4, 7, 4], oct: 6, rate: 1, voice: 'fm', ratio: 3.5, index: 1.5, len: 1, vol: .02 }, level: [.4, .5, .65] },
     notes: [
       'This is one year of scientific progress at today\'s pace. Each red square is a day of work by every researcher on Earth.',
       'Now run research ten times faster. Every calendar year, a decade of progress prints.',
@@ -47,7 +47,9 @@ import { SCENES, THREE, clamp, lerp, E, shader, pass, V, text, AU } from './00-c
         update(s) {
           s.post = { tonemap: 0, bloom: 0, vignette: .25, grain: .04, ca: .0008 };
           const Y = s.on(2) ? lerp(10, 100, E.io2(s.p[2])) : s.on(1) ? lerp(1, 10, E.io2(s.p[1])) : s.p[0];
-          s.Y = Y; const tick = Math.floor(Y * (s.on(1) ? 12 : 60)); if (tick !== lastDay) { lastDay = tick; AU.hit(s.on(2) ? 'click' : 'tick'); }
+          s.Y = Y; const tick = Math.floor(Y * (s.on(1) ? 12 : 60)); if (tick !== lastDay) { lastDay = tick; }
+          if (s.bed) s.bed.param('pulseRate', s.on(2) ? 22 : s.on(1) ? 9 : 2.5);
+          const yrDone = Math.floor(Y); if (yrDone !== (s.yPrev ?? yrDone)) { if (yrDone <= 10) AU.hit('ding'); else if (yrDone % 10 === 0) AU.hit('bell'); } s.yPrev = yrDone;
           if (s.cross(1, 0) || s.cross(2, 0)) AU.hit('paper'); if (s.cross(2, 7.6)) AU.hit('bell');
         },
         render(slot) { paper.uniforms.uAsp.value = V.W / V.H; pass(paper, slot.hdr); },

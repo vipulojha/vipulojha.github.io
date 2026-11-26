@@ -75,7 +75,7 @@ void main(){
   SCENES.push({
     id: 'loop', title: 'The loop', enterWith: 'slam', hud: { color: '#121110' },
     beats: [{ dur: 1.5, hold: 4 }, { dur: 1.5, hold: 6 }, { dur: 1.5, hold: 5 }],
-    bed: { chord: [0, 4, 7, 9], oct: 4, cut: 1400, vol: .035, level: [.3, .45, .6] },
+    bed: { chord: [0, 4, 7, 9], oct: 4, cut: 1400, vol: .028, arp: { notes: [0, 2, 4, 7, 9, 7, 4, 2], oct: 5, rate: 3, voice: 'pluck', len: .35, vol: .055, delay: .2 }, pulse: { kind: 'tick', rate: 3, vol: .12 }, level: [.4, .55, .7] },
     notes: [
       'Until recently, people built AI. Now AI helps build AI: it writes the code, runs the experiments, reads the results.',
       'Anthropic reported that in August 2026 Claude led about 26 percent of its measured AI research work, up from under 1 percent in February. That figure is self-reported and not yet independently verified. About 30,000 agents were running at once on its main internal platform.',
@@ -90,7 +90,8 @@ void main(){
           s.post = { tonemap: 0, bloom: 0, vignette: .18, grain: .045, ca: .0018 };
           s.hudColor = INK[s.beat];
           if (s.cross(1, 0) || s.cross(2, 0)) AU.hit('whoosh');
-          if (Math.floor(tt * 1.5) !== Math.floor((tt - s.dt * sp) * 1.5)) AU.hit(s.beat === 2 ? 'tick' : 'click');
+          if (s.bed) { s.bed.param('arpRate', [3, 6, 12][s.beat] * (1 + s.at(s.beat) * .02)); s.bed.param('pulseRate', [1.5, 3, 6][s.beat]); }
+          if (s.cross(1, .3)) AU.hit('stomp'); if (s.cross(1, .9)) AU.hit('ding'); if (s.cross(0, .25)) AU.hit('stomp'); if (s.cross(2, .2)) AU.hit('riser');
         },
         render(slot, s) {
           const u = mat.uniforms; u.uT.value = tt; u.uAsp.value = V.W / V.H; u.uSpeed.value = 1;

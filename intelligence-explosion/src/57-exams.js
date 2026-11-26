@@ -40,7 +40,7 @@ import { SCENES, THREE, R, clamp, lerp, E, prng, shader, pass, V, text, AU } fro
   SCENES.push({
     id: 'exams', title: 'The tests keep breaking', enterWith: 'dissolve', hud: { color: '#ffb36b' },
     beats: [{ dur: 4, hold: 4 }, { dur: 6, hold: 4 }, { dur: 4, hold: 4 }],
-    bed: { chord: [0, 3, 7, 10], oct: 3, cut: 700, vol: .045, level: [.3, .45, .55] },
+    bed: { chord: [0, 3, 7, 10], oct: 3, cut: 700, vol: .04, noise: { type: 'highpass', freq: 2500, vol: 0, wobble: .3 }, level: [.35, .5, .55] },
     notes: [
       'July 2025: experimental reasoning models from Google DeepMind and OpenAI each reached gold-medal level at the International Mathematical Olympiad, 35 of 42 points, writing their proofs in natural language.',
       'Humanity\'s Last Exam was built in late 2024 by thousands of experts to be the hardest closed test there is: 2,500 questions. At launch in January 2025, frontier models scored in single digits. By February 2026 the best reported score was about 48%. Leaderboards disagree on later numbers.',
@@ -93,7 +93,11 @@ void main(){ vec3 s=position; float life=fract(s.y+uT*(.25+s.z*.4)); float y0=uB
           embers.position.copy(page.position); embers.rotation.copy(page.rotation);
           cam.position.set(0, 0, V.portrait ? 3.6 : 2.6); cam.lookAt(0, 0, 0); cam.aspect = V.W / V.H; cam.updateProjectionMatrix();
           s.post = { bloom: .5, threshold: 1.4, exposure: .92, vignette: .55, grain: .04, ca: .0015, halation: .6, streak: .1 };
-          if (s.cross(0, 1.4)) AU.hit('slam'); if (s.cross(1, .05) || s.cross(2, .05)) AU.hit('wave');
+          if (s.cross(0, 1.4)) { AU.hit('stamp'); AU.hit('ding', 0, .15); } if (s.cross(1, .05) || s.cross(2, .05)) { AU.hit('whoosh'); AU.hit('ink'); }
+          if (s.at(0) < 1.4 && !s.on(1) && Math.random() < s.dt * 9) AU.hit('scratch');
+          const burning = u.uBurn.value > .01 && u.uBurn.value < .99; if (burning && Math.random() < s.dt * 14) AU.hit('crackle');
+          if (s.bed) s.bed.param('noise', burning ? .14 : 0);
+          if (s.cross(1, 5.4)) AU.hit('ding'); if (s.cross(2, 1.8)) AU.hit('choir');
         },
         render(slot) { pass(bg, slot.hdr); R.setRenderTarget(slot.hdr); R.render(scene3, cam); },
         draw2d(g, s) {

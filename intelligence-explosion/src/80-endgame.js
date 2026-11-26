@@ -14,7 +14,7 @@ import { SCENES, THREE, clamp, lerp, E, prng, shader, pass, V, text, SelBox, AU 
   SCENES.push({
     id: 'selectall', title: 'Select all', enterWith: 'pixelsort', hud: { color: '#ff5a4a' },
     beats: [{ dur: 3, hold: 2 }, { dur: 3, hold: 4 }, { dur: 4, hold: 3 }, { dur: 4, hold: 6 }],
-    bed: { chord: [0, 1, 7], oct: 2, cut: 400, vol: .06, wave: 'sawtooth', level: [.2, .3, .45, .35] },
+    bed: { chord: [0, 1, 7], oct: 2, cut: 400, vol: .045, wave: 'sawtooth', sub: .1, pulse: { kind: 'kick', rate: 1, vol: .3 }, level: [.25, .35, .5, .4] },
     notes: [
       'Control-A. Select everything: the research, the code, the experiments, the decisions.',
       'Anthropic says that in August its automated monitor reviewed more than a billion agent actions and blocked about one in 47,000 before they ran. Small rates times enormous volumes.',
@@ -28,6 +28,9 @@ import { SCENES, THREE, clamp, lerp, E, prng, shader, pass, V, text, SelBox, AU 
           s.post = { bloom: .6, threshold: .5, vignette: .5, grain: .04, ca: .002, exposure: 1.1 };
           if (s.cross(0, .5)) AU.hit('click'); if (s.cross(0, .8)) AU.hit('click'); if (s.cross(0, 1.2)) AU.hit('select'); if (s.cross(0, 1.4)) AU.hit('riser');
           if (s.cross(2, .3)) AU.hit('sub'); if (s.cross(3, .2)) AU.hit('boom');
+          if (s.on(1) && Math.random() < s.dt * .8) AU.hit('glitch'); if (s.on(1) && Math.random() < s.dt * 1.2) AU.hit('zap');
+          for (let i = 0; i < 4; i++) if (s.cross(3, .2 + i * .35)) AU.hit('glitch');
+          if (s.bed) s.bed.param('pulseRate', [1, 1.4, 2, 2.6][s.beat]);
         },
         render(slot, s) { bg.uniforms.uT.value = s.t; bg.uniforms.uAsp.value = V.W / V.H; bg.uniforms.uRed.value = s.k(0, 1.2, 3) * (s.on(3) ? 1.4 : 1); pass(bg, slot.hdr); },
         draw2d(g, s) {
@@ -117,7 +120,7 @@ void main(){ vec2 p=(vUv-.5)*vec2(uAsp,1.);
   SCENES.push({
     id: 'futures', title: 'Two futures', enterWith: 'ink', hud: { color: '#ffffff' },
     beats: [{ dur: 2.5, hold: 6 }, { dur: 2.5, hold: 6 }],
-    bed: { chord: [0, 4, 7, 11], oct: 4, cut: 1200, vol: .04, level: [.4, .5] },
+    bed: { chord: [0, 4, 7, 11], oct: 4, cut: 1200, vol: .032, noise: { type: 'bandpass', freq: 700, vol: .05 }, level: [.45, .55] },
     notes: [
       'Same technology, two futures. Move the pointer across the screen. On one side, the world is handed over: capable, efficient, and no longer ours to steer. On the other, the same intelligence makes a world that is better for people: disease falls, poverty ends, and power stays spread out.',
       'Which side we land on is not decided by physics. It is decided by people, by the choices labs, governments and the rest of us make in the next few years.',
@@ -129,6 +132,9 @@ void main(){ vec2 p=(vUv-.5)*vec2(uAsp,1.);
           if (s.mouse.px !== lastPx) { lastPx = s.mouse.px; lastMove = s.t; }
           const target = s.t - lastMove < 3 && lastPx != null ? clamp(lastPx / V.W, .05, .95) : .5 + .3 * Math.sin(s.t * .35);
           split += (target - split) * (1 - Math.exp(-s.dt * 4));
+          if (Math.random() < s.dt * 5) { if (Math.random() < split) AU.hit('bleep', 1.2); else AU.hit('chirp', 1.3); }
+          if (s.bed) s.bed.param('noise', .02 + (1 - split) * .09);
+          if (s.cross(0, .3)) AU.hit('kaleido'); if (s.cross(1, .4)) AU.hit('choir');
           s.split = split; s.post = { bloom: .45, threshold: 1.2, vignette: .45, grain: .03, ca: .0015, exposure: .85, contrast: 1.08 };
         },
         render(slot, s) { mat.uniforms.uT.value = s.t; mat.uniforms.uAsp.value = V.W / V.H; mat.uniforms.uSplit.value = s.split; pass(mat, slot.hdr); },
@@ -155,14 +161,14 @@ void main(){ vec2 p=(vUv-.5)*vec2(uAsp,1.);
   SCENES.push({
     id: 'questions', title: 'Questions', enterWith: 'daybreak', hud: { color: '#ffffff', alpha: .6 },
     beats: [{ dur: 5, hold: 8 }, { dur: 2, hold: 20 }],
-    bed: { chord: [0, 4, 7, 14], oct: 3, cut: 1000, vol: .05, level: [.6, .4] },
+    bed: { chord: [0, 4, 7, 14], oct: 3, cut: 1000, vol: .04, choir: .15, level: [.6, .45] },
     notes: [
       'If it goes well, the most precious thing it gives us back is time. So: what will you do with it?',
       'Sources: Metaculus community forecasts and AI Impacts expert surveys; DataReportal Digital 2026; hyperscaler 2026 capex guidance and BloombergNEF; IMO 2025 gold-level results; Humanity\'s Last Exam leaderboards; METR time-horizon research (2025–2026); Anthropic, September 2026 report on AI-led R&D; OpenAI, September 2026 Navier–Stokes announcement (under review); Alpöge and Claude, Lean proof of the Riemann hypothesis (Nov 2026); Dario Amodei, “Machines of Loving Grace” (2024); I. J. Good (1965).',
     ],
     create() {
       return {
-        update(s) { s.post = { bloom: .6, threshold: .6, vignette: .5, grain: .03, ca: .001 }; if (s.cross(0, 1.2)) AU.hit('glass'); if (s.cross(0, 3)) AU.hit('rise'); },
+        update(s) { s.post = { bloom: .6, threshold: .6, vignette: .5, grain: .03, ca: .001 }; if (s.cross(0, 1.2)) AU.hit('glass'); if (s.cross(0, 3)) AU.hit('rise'); if (s.cross(0, 1.6)) AU.hit('choir'); if (s.cross(1, .3)) AU.hit('bell'); for (let i = 0; i < 7; i++) if (s.cross(1, .2 + i * .15)) AU.hit('type'); },
         render(slot, s) { mat.uniforms.uT.value = s.t; mat.uniforms.uAsp.value = V.W / V.H; mat.uniforms.uRise.value = s.k(0, 0, 5, E.io2); pass(mat, slot.hdr); },
         draw2d(g, s) {
           const W = V.W, H = V.H, k = Math.min(W / 1920, H / 1080) * (V.portrait ? 1.6 : 1);

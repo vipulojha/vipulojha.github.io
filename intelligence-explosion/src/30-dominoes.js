@@ -41,7 +41,7 @@ import { SCENES, THREE, R, clamp, lerp, E, shader, pass, V, text, AU } from './0
   SCENES.push({
     id: 'dominoes', title: 'Each one 1.5×', enterWith: 'shatter', hud: { color: '#9ef6ff' },
     beats: [{ dur: 2, hold: 3 }, { dur: REAL_END + 1, hold: 2 }, { dur: 2, hold: 4 }],
-    bed: { chord: [0, 3, 7, 10], oct: 2, cut: 500, vol: .06, level: [.25, .5, .35] },
+    bed: { chord: [0, 3, 7, 10], oct: 2, cut: 500, vol: .045, sub: .15, choir: 0, pulse: { kind: 'tick', rate: 2, vol: .12 }, level: [.3, .5, .4] },
     notes: [
       'A row of dominoes. Each one is exactly one and a half times the size of the one before. The first is five centimetres tall.',
       'Watch the counter. Domino 18 is about 49 metres. Domino 25 is taller than the Burj Khalifa. Domino 31, almost ten kilometres, is taller than Everest. Nothing about any single step looks dramatic.',
@@ -121,7 +121,7 @@ void main(){ float t=max(uT,0.); float k=1.-exp(-t*1.2);
             const hk = h(k), th = angle(k, tf);
             Q.setFromAxisAngle(Z, -th); OFF.set(-hk * .16, 0, 0).applyQuaternion(Q);
             M.compose(P.set(xs[k] + hk * .16, 0, 0).add(OFF), Q, S.set(hk * .16, hk, hk * .5)); mesh.setMatrixAt(k, M);
-            if (k > lastHit && tf >= impT[k]) { lastHit = k; if (s.on(1) && !s.on(2) && s.dir > 0) AU.hit('domino', k / (N - 1)); if (k === N - 1) { impactT = impT[k]; if (s.on(1) && !s.on(2)) { AU.hit('boom'); AU.hit('shimmer'); } } }
+            if (k > lastHit && tf >= impT[k]) { lastHit = k; if (s.on(1) && !s.on(2) && s.dir > 0) AU.hit('domino', k / (N - 1)); if (k > 18 && s.on(1) && !s.on(2) && s.dir > 0) AU.hit('stomp'); if (k === N - 1) { impactT = impT[k]; if (s.on(1) && !s.on(2)) { AU.hit('boom'); AU.hit('shimmer'); AU.hit('thunder'); AU.hit('choir', 0, .6); } } }
           }
           mesh.instanceMatrix.needsUpdate = true;
           ci = ciAt(tf); const c0 = Math.floor(ci), fr = ci - c0; hc = 1.5 ** ci;
@@ -144,6 +144,9 @@ void main(){ float t=max(uT,0.); float k=1.-exp(-t*1.2);
           sky.uniforms.uT.value = s.t; sky.uniforms.uP.value = ci / (N - 1);
           const flash = impactT > 0 ? Math.exp(-(tf - impactT) * 3) : 0;
           s.post = { streak: .55, bloom: .6 + flash, threshold: .9, exposure: 1.05 + flash * .8, vignette: .55, grain: .035, ca: .0015 + slow * .004 + flash * .01, contrast: 1.08, halation: .4 };
+          if (slow > .45 && (s.slowPrev || 0) <= .45 && s.on(1) && !s.on(2)) AU.hit('tapestop'); s.slowPrev = slow;
+          if (s.bed) { s.bed.param('pulseRate', s.on(1) && !s.on(2) ? 2 + ci * .25 * (1 - slow) : .5); s.bed.param('choir', s.on(2) ? .15 : 0); }
+          if (s.cross(0, .3)) AU.hit('click'); if (s.cross(2, .2)) AU.hit('rise');
           s.ci = ci; s.slow = slow; s.hue = hue(Math.round(ci));
         },
         render(slot) {

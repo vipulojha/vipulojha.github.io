@@ -45,7 +45,7 @@ import { SCENES, THREE, R, clamp, lerp, E, rig, shader, pass, V, text, AU } from
   SCENES.push({
     id: 'tower', title: 'The line that moved them', enterWith: 'portal', hud: { color: '#ffffff' },
     beats: [{ dur: 6, hold: 2 }, { dur: 7, hold: 2 }, { dur: 8, hold: 2 }, { dur: 5, hold: 3 }],
-    bed: { chord: [0, 4, 7, 11], oct: 3, cut: 700, vol: .05, level: [.35, .45, .6, .4] },
+    bed: { chord: [0, 4, 7, 11], oct: 3, cut: 700, vol: .04, choir: 0, noise: { type: 'bandpass', freq: 500, q: .6, vol: .14, wobble: .13 }, level: [.4, .5, .65, .45] },
     notes: [
       'This is METR\'s measurement: how long a task, measured in human time, an AI agent can finish on its own half the time. One sheet of paper here is one hour. This is the curve the forecasters were reacting to.',
       'Across METR\'s combined task suites the doubling time is about 3.6 months. Claude Mythos Preview was estimated at roughly 17 hours, with a very wide error bar (8.5 to 55 hours).',
@@ -164,6 +164,8 @@ void main(){
           s.post = { streak: .35, flare: .25, bloom: .5, threshold: 1.1, exposure: .82, contrast: 1.1, vignette: .45, grain: .03, ca: .0016, halation: .35 };
           if (s.cross(1, .4) || s.cross(2, .4)) AU.hit('riser'); if (s.cross(2, 5) || s.cross(3, .2)) AU.hit('boom');
           if (s.cross(0, 1.2) || s.cross(0, 3.4) || s.cross(1, 3.2)) AU.hit('pop');
+          if (s.cross(1, 3.6)) AU.hit('ding'); if (s.cross(2, 6.5)) AU.hit('choir');
+          if (s.bed) { const sp = Math.min(1, Math.abs(vel) / 900); s.bed.param('noise', .06 + sp * .35 * (1 - clamp((cam.position.y - 1200) / 2500))); s.bed.param('noiseFreq', 350 + sp * 1600); s.bed.param('choir', cam.position.y > 1200 ? .12 : 0); }
         },
         render(slot, s) {
           R.setRenderTarget(slot.aux); R.setClearColor(0, 1); R.clear(); R.render(scene3, cam);
